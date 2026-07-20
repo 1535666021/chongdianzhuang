@@ -1,49 +1,45 @@
-# DELIVERY.md — 任务Q：话术模板库内置（5条真实模板）
+# DELIVERY.md — 任务R：表单预设化+勘测完工数据贯通+首页片区智能预约
 
-- 任务：任务Q 话术模板库内置（5条真实模板替换占位）
-- 版本：v28 ｜ commit：见 git log（本文件随 commit 提交）
+- 任务：任务R（R1 勘测表单预设 / R2 完工贯通 / R3 首页片区+批量预约 / R4 话术全链路入口）
+- 版本：v29 ｜ commit：见 git log 最新一条
 - 交付时间：2026-07-20
+- 历史交付：v28 任务Q（话术模板库内置 5 条真实模板），详见 git 历史
 
-## 完整改动清单（8 文件）
+## 完整改动清单（13 文件，3 代理并行 + 1号收口，越界检查通过）
 
-| 文件 | 改动 |
-|---|---|
-| `src/lib/scripts.ts` | 5 条真实模板逐字内置（通用·勘测/完工=brandId default，理想·上门前/勘测/完工=brandId lixiang，含"直在"原字）；渲染引擎新增条件块 `{#if key}` / `{#if key="值"}`（lib 层实现）；新增 `parseCityFromAddress`、`buildAddonItemsText`、`LEGACY_PLACEHOLDER_SCRIPTS`；`buildScriptVars` 扩展（场景化超米计费/工程师/勘测完工新字段），导出签名全部向后兼容 |
-| `src/lib/storage.ts` | `loadBrandScripts` 升级合并：旧占位逐字一致→自动升级新模板；用户改过的→保留不覆盖；缺失默认条目→补齐 |
-| `src/types/index.ts` | 可选追加：SurveyInfo+6（powerSource/installType/meterStatus/needPlanDoc/surveyResult/propertyAllow）、CompletionInfo+3（actualCable/addonFee/installDetail）、BrandRateConfig+overMeterPrice（默认45元/米） |
-| `src/components/ScriptDialog.tsx` | extras 富化：自动注入设置页工程师姓名/电话、品牌套包米数/超米单价、品牌显示名 |
-| `src/components/modals/SurveyModal.tsx` | 新增 6 个可选字段（电表状态/用电方式/安装方式/物业允许/方案图/勘测结果），保存入库并代入话术 |
-| `src/components/modals/CompleteModal.tsx` | 新增 3 个可选字段（实际线缆/增项费用/安装详情），保存入库并代入话术 |
-| `src/pages/AppointmentPage.tsx` | 上门话术入口按 preVisit 模板存在性门控（默认仅理想有 → 非理想订单无入口） |
-| `DELIVERY.md` | 本文件 |
+| 文件 | 归属 | 改动 |
+|---|---|---|
+| `src/types/index.ts` | 1号 | 追加 FormPresets 接口、SurveyInfo.cableSpec、STORAGE_KEYS.formPresets |
+| `src/lib/storage.ts` | 1号 | 追加 loadFormPresets/saveFormPresets（部分存档按字段合并） |
+| `src/lib/addonOptions.ts` | 1号（冻结） | 新建：增项下拉共享逻辑 getAddonOptions（品牌清单×历史频率降序） |
+| `src/lib/geoCluster.ts` | 4号+1号 | 追加 BatchAppointmentDraft/时段常量/getAppointableOrders；1号修复 extractAreaName 跨市界吞字（"市巢湖市烔炀镇"→"烔炀镇"） |
+| `src/lib/formPresets.ts` | 2号 | 新建：DEFAULT_FORM_PRESETS 六项默认（国网取电/3*6/壁挂安装/已安装/否/车位是符合安装） |
+| `src/lib/overFeeSync.ts` | 3号 | 新建：syncOverFeeRow 实际用线→超米费增项行自动同步 |
+| `src/components/modals/SurveyModal.tsx` | 2号 | 重排：分区卡片（线缆信息/位置信息）+双列网格；全预设（勘测人=设置页工程师姓名联动）；增项下拉（可增删改金额）；米数→预估增项实时显示（费率读配置）；备注随单保存进话术 |
+| `src/components/settings/FormPresetSection.tsx` | 2号 | 新建：设置页「表单预设」区，6 项可改，防抖自动保存 |
+| `src/pages/SettingsPage.tsx` | 2号 | 挂载表单预设分区 |
+| `src/components/modals/CompleteModal.tsx` | 3号 | 勘测数据全贯通（米数/增项/备注/安装详情带入）；增项下拉同一共享函数；实际用线→超米费行联动；删除扣点输入框（保存时读平台扣点配置，profitData 口径不变） |
+| `src/pages/HomePage.tsx` | 4号 | 删除状态筛选排；原位片区分组（总单数+各片区单数，点片区过滤）；片区批量预约入口 |
+| `src/components/BatchAppointmentDialog.tsx` | 4号 | 新建：片区选日期+时段+师傅一键批量转已预约（逐单 saveAppointment，已预约跳过） |
+| `src/components/order/OrderCard.tsx` | 4号 | ⋯菜单自闭环话术入口：已预约/已勘测→勘测话术（无勘测数据灰显），已完成→勘测话术+完工话术；ScriptDialog 复用无长按 |
+| `src/index.css` | 1号 | 尾部追加 .form-grid-2col（双列网格，全局间距变量） |
 
-## 设计要点
+## 自测结果
 
-- 模板原文逐字内置，变量 {} 占位；条件块为引擎语法不属于展示文本：
-  - 理想勘测 `{#if hasOverFee}`：overMeters=cableDistance−套包30米，≤0 增项行整行不显示
-  - 理想勘测 `{#if meterStatus="未安装"}`：温馨提示整段条件出现
-- 超米单价默认 45 元/米，品牌费率配置可加 overMeterPrice 按品牌覆盖
-- 增项明细规则：套包内行只列"名称 数量"，收费行列"= ¥小计"，合计只汇总收费行
-- 设置页话术编辑/自动保存/恢复默认行为不变；用户已改模板不被覆盖（占位才升级）
-
-## 自测结果（node 直跑 lib 渲染，19/19 通过）
-
+**2号 R1**：预设读取/部分合并/持久化/增项频率排序全过；话术红线 45m→675 行、未安装→温馨提示、备注"测试备注X"→话术含备注 全过。
+**3号 R2**：syncOverFeeRow 6 用例全 PASS（45→超15×45 增行、改 25→移除、手调保留、重算覆盖、未填无行、去重）。
+**4号 R3+R4**：聚类 8 单构造用例全过（烔炀镇3/槐林镇2 成组、批量预约跳过已预约、时段常量一致）；OrderCard 菜单三状态话术项齐全。
+**1号收口回归（9 PASS / 0 FAIL）**：
 ```
-PASS | 模板含原有字样「直在」
-PASS | 理想安装完成模板原文
-PASS | 默认模板共5条
-PASS | 通用无上门前模板（非理想无入口依据）
-PASS | 通用=除理想外全部品牌回退default
-PASS | cableDistance=45 → 增项行渲染正确（预估线缆45m超15m，每米45元，合计675元。）
-PASS | 电表=已安装 → 温馨提示不出现
-PASS | cableDistance=25 → 增项行整行不显示
-PASS | 电表=未安装 → 温馨提示整段出现
-PASS | 城市从地址解析 安徽-合肥-巢湖
-PASS | 实际线缆代入
-PASS | 完工超米费用 18×45=810
-PASS | parseCity 标准三段 / 无省两段
-PASS | 上门前日期时段代入 / 无残留未代入变量
-PASS | 套包内行只列名称数量 / 收费行列小计 / 合计只汇总收费行(135)
+PASS | 恢复出厂（密码147568）140 单
+PASS | 7月 20 单 / 实际利润 5780.40（验收8 基线不变）
+PASS | 5月 55单/6512.40 不回归
+PASS | 6月 50单/8308.50 不回归
+PASS | extractAreaName：烔炀镇 / 槐林镇 / 黄麓镇 / 迎江区
 ```
-
 工程级：`tsc --noEmit` 0 错误；`vite build` 通过。
+
+## 遗留说明
+- 旧「片区推荐」展开卡（含预估利润展示）被新片区分组设计替代，预估利润展示随之移除（新需求未含）；如需保留请甲方确认后补。
+- 勘测人联动源改为设置页「工程师姓名」（engineerName），原 defaultSurveyor 不再驱动勘测表单（按需求 2 执行）。
+- 「超米费」行以名称识别，手动改名后退出自动同步（设计语义，代码头注释已注明）。
