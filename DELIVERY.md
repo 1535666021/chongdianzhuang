@@ -114,7 +114,7 @@ PASS | 锁定五文件（parser/statistics/finance/migrate/costMapping）与 v36
 
 ```
 PASS | tsc --noEmit 0 错误
-PASS | vite build 通过（PWA 8 entries）
+PASS | vite build 通过（PWA 7 entries，108模块）
 PASS | 固定辅材拆三行：漏保 C40 ¥40.00 / PVC管 30米 ¥21.00 / 扎带+胶带 ¥10.00 = ¥71.00（逐分对平）
 PASS | 材料成本行可点击→打开 FixedMaterialsDialog 子窗口
 PASS | 漏保未绑定→breakerLabel="漏保 未绑定"、breakerCost=0、该项不计价
@@ -128,3 +128,9 @@ PASS | 锁定五文件（parser/statistics/finance/migrate/costMapping）与 v36
 - vite build 通过
 - 预览地址：https://8000-77724fea6c27ee7f.monkeycode-ai.online
 - git push：待平台配置 git_identity
+
+## v36.2 构建修复补记
+
+- **根因**：工作区根目录 `index.html` 为预构建 HTML（引用旧 `index-BehB8V2D.js`），Vite 将其作为入口重打包旧产物，而非从 `src/` 编译源码。同时 `src/src/` 嵌套旧代码目录导致 tsc 报错。
+- **修复**：① `index.html` 改为标准 Vite 入口点（`<script type="module" src="/src/main.tsx">`）；② 删除 `src/src/` 嵌套目录；③ 新增 `.gitignore` 排除 `node_modules/` 和 `dist/`
+- **验证**：`tsc --noEmit` 0 错误；`vite build` 108 模块（修复前仅 8）；构建产物 `index-uQ2eyHxL.js` 确认含 `fixedAuxItems`、`FixedMaterialsDialog`、`paddingLeft` 等全部新代码
