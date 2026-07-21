@@ -34,17 +34,56 @@ export const DEFAULT_COST_MAPPINGS: CostMapping[] = [
 ];
 
 /* ------------------------------------------------------------
- * 二增、漏保规格→默认单价兜底（v36.2-P1）
- *   用途：材料库（localStorage）未绑定时，findBreakerPrice 用此表兜底
- *   规则：C25=35, C40=45, C40A=55；可被材料库匹配值覆盖
+ * 二增、从成本表查漏保价格（v36.2-P1 修正：查 cp_cost_sheet，非硬编码）
+ *   用途：材料库（loadMaterialsLib）未绑定时，查成本表（loadCostSheet）兜底
+ *   规则：成本条目 name 含"漏保"类关键词 + 规格串或数字匹配
+ *   匹配成功自动填入单价，匹配失败返回 null（由子窗口置空并提示去绑定）
  * ------------------------------------------------------------ */
 
-/** 漏保规格→默认成本单价（材料库空/未匹配时的兜底，对齐行业参考价） */
-export const DEFAULT_BREAKER_PRICE_MAP: Record<string, number> = {
-  C25: 35,
-  C40: 45,
-  C40A: 55,
-};
+/** 成本表条目最小契约（CostSheetItem 子集，本模块不入 storage 铁则） */
+export interface CostTableEntry {
+  name: string;
+  costPrice: number;
+}
+
+/** 是否漏保类条目：name 含"漏保"或"漏电保护" */
+function isBreakerName(name: string): boolean {
+  return name.includes("漏保") || name.includes("漏电保护");
+}
+
+/**
+ * 在成本表中搜索漏保对应规格的价格（三级递退）：
+ * 1. name 直接含规格串（如 "C40A"、"C25"）；
+ * 2. 漏保类条目且 name 含规格数字部分（25/40）；
+ * 3. 首个漏保类条目；
+ * 全不中返回 null。
+ */
+export function findBreakerPriceInCostSheet(
+  spec: string,
+  costSheet: CostTableEntry[],
+): number | null {
+  const specLower = spec.trim().toLowerCase();
+  if (!specLower) return null;
+
+  /* 1. name 直接含规格串 */
+  const direct = costSheet.find((c) =>
+    c.name.toLowerCase().includes(specLower),
+  );
+  if (direct) return direct.costPrice;
+
+  /* 2. 漏保类条目且 name 含规格数字 */
+  const digits = spec.replace(/\D/g, "");
+  if (digits) {
+    const byDigits = costSheet.find(
+      (c) => isBreakerName(c.name) && c.name.includes(digits),
+    );
+    if (byDigits) return byDigits.costPrice;
+  }
+
+  /* 3. 首个漏保类条目 */
+  const any = costSheet.find((c) => isBreakerName(c.name));
+  return any ? any.costPrice : null;
+}
 
 /* ------------------------------------------------------------
  * 三、映射查询（先精确匹配，再 includes 模糊匹配，mappings 顺序优先）

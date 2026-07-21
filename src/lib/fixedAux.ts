@@ -6,7 +6,8 @@
  * ============================================================ */
 
 import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
-import { DEFAULT_BREAKER_PRICE_MAP } from "./costMapping";
+import type { CostTableEntry } from "./costMapping";
+import { findBreakerPriceInCostSheet } from "./costMapping";
 
 /* ------------------------------------------------------------
  * 一、漏保规格与兜底常量
@@ -54,12 +55,11 @@ function isBreakerItem(name: string): boolean {
 }
 
 /**
- * 材料库模糊匹配漏保价（大小写不敏感），四级递退：
+ * 材料库模糊匹配漏保价（大小写不敏感），三级递退：
  * 1. 名称直接含规格串（如 "C40A"，零跑"漏电保护开关（2P C40A型…）"命中）；
  * 2. 漏保/漏电保护条目且名称含规格数字部分（25 / 40）；
  * 3. 首个漏保/漏电保护条目；
- * 4. v36.2-P1：前三级不中→查 DEFAULT_BREAKER_PRICE_MAP 兜底（C25=35, C40=45, C40A=55）；
- * 全不中返回 null（由子窗口置空并提示绑定）。
+ * 全不中返回 null（由调用方继续查成本表，最终不中提示绑定）。
  * 价格口径：成本价优先，无成本价用销售价。
  */
 export function findBreakerPrice(
@@ -84,13 +84,7 @@ export function findBreakerPrice(
 
   /* 3. 首个漏保/漏电保护条目 */
   const anyBreaker = lib.find((m) => isBreakerItem(m.name));
-  if (anyBreaker) return costBasisPrice(anyBreaker);
-
-  /* 4. v36.2-P1：DEFAULT_BREAKER_PRICE_MAP 兜底（规格精确匹配） */
-  const price = DEFAULT_BREAKER_PRICE_MAP[spec.trim()];
-  if (price !== undefined) return price;
-
-  return null;
+  return anyBreaker ? costBasisPrice(anyBreaker) : null;
 }
 
 /* ------------------------------------------------------------
@@ -98,21 +92,26 @@ export function findBreakerPrice(
  * ------------------------------------------------------------ */
 
 /**
- * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价材料库模糊匹配；
- * 任务v36.1 FAIL-3：未命中→breakerPrice=null（严禁自动填兜底数，
+ * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价先查材料库再查成本表；
+ * 任务v36.1 FAIL-3：均为 null→breakerPrice=null（严禁自动填兜底数，
  * 由子窗口置空并提示「未匹配价格，请到设置页成本表绑定」），
- * PVC 米数默认=用线米数。材料库由调用方 loadMaterialsLib() 读取后传入。
+ * PVC 米数默认=用线米数。
+ * 材料库/成本表由调用方读取后传入（本模块铁则不 import storage）。
  */
 export function defaultFixedAux(
   order: Order,
   brandName: string,
   cableMeters: number,
   lib: MaterialItemLib[],
+  costSheet: CostTableEntry[],
 ): FixedAuxSelection {
   const breakerSpec = defaultBreakerSpec(order.powerKw, brandName);
+  const breakerPrice =
+    findBreakerPrice(breakerSpec, lib) ??
+    findBreakerPriceInCostSheet(breakerSpec, costSheet);
   return {
     breakerSpec,
-    breakerPrice: findBreakerPrice(breakerSpec, lib),
+    breakerPrice,
     pvcMeters: cableMeters,
   };
 }
