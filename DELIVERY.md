@@ -1,43 +1,59 @@
-# DELIVERY.md — v33 任务包：零跑增项模板（36条默认+维护区+录入触发）
+# DELIVERY.md — v32.2 任务包：补桩全链路恢复 + 水印格式 + 已预约角标 + 师傅带入 + 首页按钮口径A
 
-- 任务：零跑增项模板——数据源《零跑汽车充电桩安装服务告知书》增项收费标准（2025-02-18 起执行，甲方供图逐行清点：分组序号 1-31、明细行=36 条）
-- 版本：v33 ｜ commit：见 git log 最新一条（上一节点 140a04f v32.1）
+- 任务：任务包v32.2 五条（一补桩恢复 / 二水印格式 / 三已预约角标 / 四师傅带入 / 五首页按钮+口径A）
+- 版本：v32.2 ｜ commit：见 git log 最新一条（上一节点 2f8cacc v33；本轮基于含 v32.1 全部内容的 v33 增量）
 - 交付时间：2026-07-21
-- 施工模式：集群三线——3号线（总管）先落契约（lib 36条数据+判定+金额计算、types/storage 键），1号线（设置页维护区）与 2号线（勘测+完工录入交互）并行，总管收口质检
+- 施工模式：集群四线——总管兼 3号线（根因定案+逻辑层修正+契约），1号线（OrderCard 页面化+TabBar）/2号线（口径A+师傅带入+已预约承接）/4号线（水印文案）并行，总管收口质检
 
-## 改动文件清单（改 5 + 新 2，零越界已核验：parser/statistics/finance/migrate 与 v32.1 逐字节一致）
+## 根因定案（任务一/四，diff 定位）
 
-| 线 | 文件 | 改动要点（业务逻辑全部收敛 src/lib，视图层只渲染） |
+- **任务一·补桩标签消失**：双根因。①v31 首判机制为一次性（cp_restock_evaluated 标记），恢复出厂管道（importV7Backup 逐键覆盖）不经清空函数，标记残留 → 老设备恢复出厂后首判不重跑、全单无标记；②v7 承接库存有负数超发挂账（五菱 -4/长城 -1/比亚迪 -1），v31 库存判定 `===0` 漏判负库存 → 生产口径（mergeBrands 解析品牌名后）五菱单不挂标。v32 的零跑守卫/清洗 effect 经 diff 自证对非零跑零触碰。
+- **任务四·师傅不带入**：预约弹窗读 `settings.defaultInstaller`（人员默认区，空），用户配的是「工程师信息」`engineerName`——字段错位。
+
+## 改动文件清单（改 10 + 新 0，零越界已核验：parser/statistics/finance/migrate 与 v33 逐字节一致；index.css/types 零改动）
+
+| 线 | 文件 | 改动要点 |
 |---|---|---|
-| 3号线·契约 | `src/lib/leapmotorAddons.ts`（新） | DEFAULT_LEAPMOTOR_ADDONS 36 条（id leap-01~36，名称/单位/单价=告知书图面原文）；isLeapmotorBrand（品牌名含"零跑"即真，不分平台不看原文）；leapmotorAddonLineAmount/leapmotorAddonsTotal（单价×数量、合计；无单价=套包内不计价；分位防浮点） |
-| 3号线·契约 | `src/types/index.ts` | LeapmotorAddon 接口；STORAGE_KEYS.leapmotorAddons="cp_leapmotor_addons"（只增量） |
-| 3号线·契约 | `src/lib/storage.ts` | 十五节 load/saveLeapmotorAddons（键不存在回默认36条，用户存空数组=尊重）；恢复出厂清空区加该键（回默认36条 ✓） |
-| 1号线·维护区 | `src/components/settings/LeapmotorAddonsSection.tsx`（新）+ `SettingsPage.tsx` | 设置页「零跑增项模板」：条目逐行可改名称/单位/单价（失焦整存）+ 添加条目（校验名称非空、单价有限数≥0，id leap-custom-时间戳）+ 删除 + 重置为默认36条 + 当前共 N 条；SettingsPage 仅挂载四处 |
-| 2号线·录入交互 | `src/components/modals/SurveyModal.tsx` + `CompleteModal.tsx` | 零跑单（isLeapmotorBrand 触发）增项区新增「零跑增项模板」下拉（选项=36条`名称（单价元/单位）`），选中追加行（数量1/单价模板价，行内可改）；行内行金额显示（¥单价×数量/套包内）+ 区底「增项合计 ¥N」；手填自定义与现有品牌增项下拉一字未动；非零跑单新 UI 全门控不渲染（diff 自证与 v32 逐字一致） |
+| 3号线·总管 | `src/lib/restock.ts` | 补桩守卫修正：库存判定 `===0`→`<=0`（负库存超发=更缺货必须挂标；库存>0 不挂原口径不变） |
+| 3号线·总管 | `src/lib/storage.ts` | importV7Backup 重置首判标记（write restockEvaluated=false，恢复出厂后挂载首判重跑全判）；清空区同步补 removeItem（清空按钮场景双保险） |
+| 3号线·总管 | `src/lib/watermark.ts` | 默认模板=`{平台}{品牌}＋4个半角空格＋{姓名}`；buildWatermarkName 四参（+brand）；旧模板无{品牌}按旧渲染不受影响 |
+| 1号线 | `src/components/order/OrderCard.tsx` | 页面化渲染（新 prop page="home"|"appointment"）：home=主[预约]（全单型统一）+⋯菜单只收[查看原文/删除]、无水印名；appointment=主[登记勘测]+次[登记完工]+[水印名]（新四参）+⋯菜单 v32 现状；电话/导航/五标签/原文弹窗全保留 |
+| 1号线 | `src/components/common/TabBar.tsx` | 已预约 tab 角标=Appointed 单数（tab-bar__badge 与首页同款，0 单不显示） |
+| 2号线 | `src/pages/HomePage.tsx` | 口径A：homePool（Pending+Surveyed）单源驱动 todoCount/areaClusters/filtered 底池三处（已预约单不进首页任何列表与计数）；OrderCard 传 page="home" 并摘除 onSurvey/onComplete |
+| 2号线 | `src/pages/AppointmentPage.tsx` | 三处 OrderCard 传 page="appointment"+onSurvey（新增 SurveyModal 承接挂载）+onComplete——接得住[登记勘测][完工][水印名] |
+| 2号线 | `src/components/AppointmentFormDialog.tsx` + `BatchAppointmentDialog.tsx` | 师傅带入=defaultInstaller \|\| engineerName \|\| ""（回退链，可手改，未配=空+placeholder）；批量预约弹窗同款 bug 同口径修复 |
+| 4号线 | `src/components/settings/WatermarkSection.tsx` | 文案三变量口径：{平台}{品牌}{姓名}，默认「{平台}{品牌}连写＋4空格＋{姓名}（例：京东零跑    张三）」，旧模板无{品牌}不受影响（仅 3 行文案） |
 
-`src/index.css` 零改动（全复用现有类）；`Modal.tsx` 零改动。
-
-## 自测结果（node+esbuild 直跑 lib，localStorage stub，共 52 PASS / 0 FAIL）
+## 自测结果（node+esbuild 直跑 lib 真实恢复出厂管道，共 58 PASS / 0 FAIL）
 
 ```
-══ v33 契约层（16项）══
-PASS | storage 三态：键不存在→默认36条 / 存空数组→尊重空列表 / 删键(恢复出厂)→回默认36条
-PASS | 36条价格点抽（对照图面）：leap-01 电缆3×6=45/米、leap-10 A2水泥路=130、leap-18 穿墙60-80=120、
-       leap-26 报装=500/项、leap-33 拆除和挂桩=400/次、leap-36 漏保=100/个
-PASS | 触发四态：零跑✓/零跑汽车✓/理想✗/五菱✗
-PASS | 金额：45×3=135 / 无单价=0 / 浮点0.1×3=0.3 / 合计235
-══ 回归基线（v32.1 全量 36项）══
-PASS | 恢复出厂(147568)：143单=待办9/已预约3(种子逐字)/完成125/回收站6
-PASS | 首页底池=9无种子混入；完工月分布{05:55,06:50,07:20}不变
+══ 任务一·补桩四环（生产口径模拟）══
+PASS | 老设备现场还原：预置首判标记=true → 恢复出厂后标记重置=false（首判重跑）
+PASS | 环1挂标：吉利安装单全挂（库存无记录=0）；五菱36安装单全挂（生产口径库存=-4≤0）；
+       零跑16单全部仅上门不误挂；needed=115/仅上门=15
+PASS | 环2互转：需补桩⇄已补桩双向
+PASS | 环3汇总：发货单含吉利/五菱、不含零跑仅上门、条数=挂标数、文本生成正确
+PASS | 环4完工：吉利完工库存-1（2→1）；零跑仅上门完工库存不变（2→2）
+══ 任务二·水印新格式 ══
+PASS | 默认模板={平台}{品牌}+4×0x20+{姓名}；渲染「京东零跑    张三」逐字符（恰4空格）
+PASS | 自定义含{品牌}模板渲染；旧模板无{品牌}按旧渲染不受影响；空品牌不伪造
+══ 任务三/四/五（代理自验+联调）══
+PASS | TabBar appointedCount 角标（恢复出厂=3，0单不显示）
+PASS | 师傅回退链两处（defaultInstaller||engineerName||""）
+PASS | OrderCard page 三分支；home ⋯菜单两项；appointment 三按钮+水印名四参
+PASS | 口径A：homePool 三处同源（todoCount/聚类/底池），首页=9、片区全部=9、已预约3单不出现
+══ 回归基线（34项）══
+PASS | 143=待办9/已预约3(种子逐字)/完成125/回收站6；材料572/结算价30/工程师谢责强15395147568
 PASS | 5月55/15692/9897/17097.2/6512.4；6月50/13110/11142/13715.1/8308.5
-PASS | 7月20(装13/修4/勘3)/4390/8700/6439.6/对账6570.40/实际5780.40
-PASS | 材料库572/结算价30/工程师谢责强15395147568；原有140单一单未动
+PASS | 7月20(装13/修4/勘3)/4390/8700/6439.6/对账6570.40/实际5780.40；原140单一单未动
 ```
 
-工程级：`tsc --noEmit` 0 错误；`vite build` 通过（PWA 11 entries）；两线代理 esbuild 自验全过。
+工程级：`tsc --noEmit` 0 错误（1号线 prop × 2号线传参联调过）；`vite build` 通过（PWA 11 entries）；三线代理 esbuild 自验全过（4号线含 4×0x20 字节级核验）。
 
 ## 使用说明（师傅版）
 
-1. 零跑的单子登记勘测/完工时，增项区最上面多一个「零跑增项模板」下拉——36 个官方增项（电缆敷设/开沟开槽/穿墙打孔/移桩/漏保开关等）直接选，选出来数量单价都能改，行金额和合计自动算。
-2. 模板价格不对？设置页→零跑增项模板：逐条改价、加新项、删项都行；「重置为默认 36 条」一键回官方价。恢复出厂也回默认 36 条。
-3. 非零跑的单子一切照旧，看不到这个下拉。
+1. 补桩标回来了：吉利、五菱这些牌子库存没了（含超发欠货）的安装单照样挂「需补桩」，照优点按互转、照进一键补桩；零跑不写"带桩上门"的还是「仅上门安装」。
+2. 水印名升级：点「水印名」复制的是「京东零跑    张三」（平台品牌连写+4个空格+姓名），贴水印相机正好；设置页模板多了个 {品牌} 变量。
+3. 底部「已预约」有数字角标了，几个待上门一眼看到。
+4. 预约弹窗的师傅自动带你的名字（工程师信息里配的那个），可改。
+5. 首页清净了：卡上就一个「预约」按钮，电话导航图标照旧；登记勘测、完工挪到「已预约」页去点，水印名也在那边。
