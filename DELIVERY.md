@@ -1,76 +1,44 @@
-# DELIVERY.md — v34 P0 修复：备份还原已预约单丢失（V7 已预约翻正 + 残缺明示）
+# DELIVERY.md — v35 任务包：套包账目逻辑 + 外发文本预览总规矩
 
-- 任务：备份还原已预约单丢失修复（P0 数据级 bug——甲方 V7 老备份 3 个已预约单导入后"消失"）
-- 版本：v34 ｜ commit：见 git log 最新一条（上一节点 225e2b7 v32.3）
+- 任务：v35 两大块（一套包账目逻辑：识别/手填/超出自动算/增项自动带/话术只摆超出；二外发文本预览+可编辑总规矩：五类文本复制前先预览可编辑）
+- 版本：v35 ｜ commit：见 git log 最新一条（上一节点 1180364 v32.4）
 - 交付时间：2026-07-21
-- 施工模式：单代理（根因 diff 定位 → 修复 → 三来源全场景自测）
+- 施工模式：集群三线——1号线（总管）先落冻结契约（lib/scripts/types/预览组件），2号线（勘测+完工弹窗）、3号线（预览接入三处）并行，2号线补充任务（materialsText 换格式+预估清单接预览）串行补给，总管收口质检（tsc 打回 1 次复验过）
 
-## 根因定案（diff 完成）
+## 改动文件清单（改 7 + 新 2，零越界已核验：parser/statistics/finance/migrate 与 v32.4 逐字节一致；types/storage/AppContext 零改动——复用 Order.packageMeters 既有字段）
 
-v7 老系统**没有独立 appointed 状态**：「已预约」单存放在 orders 桶中（status="pending"），靠 `appointmentDate + appointmentPeriod` 字段表达（实锤：出厂备份 exportDate=2026-07-16，orders 桶 9 单中 3 单带完整预约信息=老系统已预约 tab 角标 3 的单：祝十七 07-16/上午、汤涛 07-14/上午、llbEHPxUVP 07-12/上午）。migrateV7Backup 桶映射（orders→Pending）把这 3 单一律压成待办，已预约页因此"丢单"。v1 管道（新系统自产/v32.x 导出备份）status 原样入库，不受此病。
+| 线 | 文件 | 改动要点 |
+|---|---|---|
+| 1号线·逻辑 | `src/lib/packageMeters.ts`（新） | 套包业务唯一收敛处：parsePackageMetersFromText（7 模式识别：套包米数:30米/30米套包/30米套餐/套包30米/含40米线/免费30米/30米免费）；resolveOrderPackageMeters（持久化→识别→null）；getOverMeters（超出=布线-套包，≤0=0）；syncCableAddonRow（v29 同语义 v35 行名「线缆敷设」，超出自动入行/重算覆盖/≤0 移除/他行保留）；buildCableOverFeeText（`布线X米，超出套餐Y米×¥单价=¥Z`） |
+| 1号线·话术 | `src/lib/scripts.ts` | buildAddonItemsText 加 cable 可选参（线缆敷设行输出 v35 格式，他行/无参原格式兼容）；buildScriptVars 套包取数链=extras ?? resolveOrderPackageMeters(order) ?? 30；默认模板 lixiang 两段改 v35 格式（恢复出厂/新设备生效；老用户存档模板按 v28 合并机制保留原文） |
+| 1号线·组件 | `src/components/TextPreviewDialog.tsx`（新）+ `index.css` | 外发文本统一预览编辑器（open/title/text/onClose/onCopy(edited)，每次打开重置草稿）；text-preview-editor 样式（全 CSS 变量） |
+| 2号线·勘测 | `src/components/modals/SurveyModal.tsx` | 「套包米数」字段（打开预填=持久化值→原文识别→空；保存时 updateOrder 持久化，非法不拦截）；布线距离变更/初始化时 syncCableAddonRow 联动（单价=品牌 overMeterPrice 缺省 45）；materialsText 与预估清单的线缆行换 v35 格式；预估清单接 TextPreviewDialog（复制前预览可编辑） |
+| 2号线·完工 | `src/components/modals/CompleteModal.tsx` | syncOverFeeRow→syncCableAddonRow 换芯（套包=resolveOrderPackageMeters ?? 品牌费率；打开时识别值写回持久化）；materialsText 线缆行换 v35 格式；界面文案对齐「线缆敷设行」 |
+| 3号线·话术预览 | `src/components/ScriptDialog.tsx` | 话术文本区只读→受控可编辑 textarea（text-preview-editor），复制取编辑后值 |
+| 3号线·发货单 | `src/components/RestockDialog.tsx` | 预览 pre 只读→textarea 可编辑（previewText+dirty 标记：未手改随计算值同步，手改不覆盖）；复制取编辑后值 |
+| 3号线·订单卡 | `src/components/order/OrderCard.tsx` | 水印名按钮（已预约页）点击直复制→弹 TextPreviewDialog 预览可编辑再复制；勘测信息行尾追加「· 套包{N}米」（order.packageMeters 有值时，师傅视角） |
 
-## 改动清单（源码改 1 文件；migrateV7Backup 签名不变、parser/statistics/finance/migrate 与 v32.3 逐字节一致）
-
-| 文件 | 改动要点 |
-|---|---|
-| `src/lib/storage.ts` | ①importV7Backup 新增「已预约翻正」：migrate 后 Pending 且 appointment 日期/时段均非空 → Appointed（日期/时段已由 migrate 原样迁入，PERIOD_TO_SLOT 映射与已完成桶 118 单同口径；一对一 map 单数不变不丢单）；②静默丢弃防御：种子/残缺数据丢弃计数，导入结果明示文案（"N 条数据因格式不完整未导入，其余已全部还原"，Toast 展示）；③types 导入补 OrderStatus（值引用） |
-
-## ⚠️ 基线口径变化（翻正副作用，请监理裁定）
-
-恢复出厂（147568）后单数口径变化：待办 **9→6**（3 个带预约老单翻正）、已预约 **3→6**（3 真身+3 种子）、已预约 tab 角标 **3→6**；总数 143、已完成 125、回收站 6、三个月账目**均不变**（翻正只动 orders 桶 Pending 单，不碰 completed 桶）。旧基线"待办9/已预约3"系 v32.x 时代（bug 未修时）数字，验收基线第 2/4 条的相关数字建议同步更新为 6/6。
-
-## 自测结果（35 PASS / 0 FAIL）
+## 自测结果（node+esbuild 直跑 lib，共 60 PASS / 0 FAIL）
 
 ```
-══ 场景A·金标准 V7 迷你备份（模拟甲方老备份结构）══
-PASS | 3 个已预约单一单不少全回 Appointed；日期时段逐字（07-25/09:00-12:00、07-26/14:00-18:00、07-27/18:00-21:00）
-PASS | 纯待办 1 单不翻（Pending）；已完成 1/回收站 1 抽测正确
-PASS | 残缺种子 1 条：不静默丢，返回明示文案（数量+原因）
-══ 场景B·恢复出厂全流程（147568）══
-PASS | 143 单=待办6/已预约6/完成125/回收站6；真身 3 单（祝十七 07-16、汤涛 07-14、llbEHPxUVP 07-12 均上午=09:00-12:00）逐字翻正
-PASS | 种子 3 单完整；角标=6；待办抽测（6 单无预约残留）/已完成抽测（快照在）/回收站抽测
-PASS | 备份→恢复出厂→还原（v1 自产）：143=6/6/125/6 保持、真身种子全完整（场景①②管道无病）
-══ 永恒回归 ══
-PASS | 7月20单/对账6570.40/实际5780.40；5月6512.4；6月8308.5；材料库572/结算价30/工程师谢责强15395147568
+══ v35 契约层（24+7 项）══
+PASS | 识别 9 模式：套包米数:30米 / 30米套包 / 30米套餐+3.5kw / 含40米线 / 免费30米 / 30米免费 / 套包40米 / 无信息→null / 真实v7原文多字段混合
+PASS | 取数链：持久化优先 / 识别兜底 / 都无→null；种子单原文端到端识别=30
+PASS | 超出：套包30布线33→3 / 布线25→0 / 未填→0
+PASS | 增项行：超出3×¥40自动入行 / =0不生成 / 他行保留 / 改米数重算覆盖 / 缩到套包内行消失
+PASS | 话术格式逐字「布线33米，超出套餐3米×¥40=¥120」；materialsText/addonItems 透传同格式；overFee=120 与行单价 40 口径一致
+PASS | 渲染 default 模板：含 v35 逐字行、无套包内明细（无 YJV/线缆明细残留）
+══ 回归基线（v32.4 全量 28 项）══
+PASS | 143=待办6/已预约6(种子逐字)/完成125/回收站6（v34口径）；材料572/结算价30/工程师谢责强15395147568
+PASS | 5月55/15692/9897/17097.2/6512.4；6月50/13110/11142/13715.1/8308.5；7月20(装13/修4/勘3)/4390/8700/6439.6/对账6570.40/实际5780.40
+PASS | 状态保持/口径3/完工链路/备份还原贯穿（v32.4 功能零退化）
 ```
 
-工程级：`tsc --noEmit` 0 错误；`vite build` 通过（PWA 11 entries）；锁定四文件 diff 全空。
+工程级：`tsc --noEmit` 0 错误（初查 2 处 TS2345 打回 2号线返修，复验 0）；`vite build` 通过（PWA 11 entries）；三线代理 esbuild 自验全过。
 
 ## 使用说明（师傅版）
 
-老系统导出来的备份放心导：之前会"吃掉"已预约单（其实被错放进待办），现在 3 个约好的单子会老老实实出现在「已预约」页，约的日子和时段一个字不差。要是备份里有格式不全的单子，导完会明明白白告诉你"有几条没进来、为什么"，不会不吭声就丢。
-
----
-
-# DELIVERY.md 追加 — v32.4 修复：已预约单登记勘测状态保持
-
-- 版本：v32.4 ｜ commit：见 git log 最新一条（上一节点 51e0261 v34）｜ 交付时间：2026-07-21
-- 施工模式：单代理（根因定位+修复+状态机自测）
-
-## 根因
-
-AppContext.saveSurvey 一律把状态改写为 Surveyed——已预约单登记勘测后被踢出已预约页，随首页底池（Pending+Surveyed）"跑回首页"。
-
-## 改动清单（改 2 文件；parser/statistics/finance/migrate 与 v34 逐字节一致）
-
-| 文件 | 改动要点 |
-|---|---|
-| `src/context/AppContext.tsx` | saveSurvey 状态保持：当前状态=Appointed → 保持 Appointed（只补填 survey 数据，预约日期/时段保留，留在已预约页；唯一离开路径=完工→已完成）；其余（Pending）→ Surveyed（原口径） |
-| `src/pages/HomePage.tsx` | homePool 口径3：已勘测底池只收「从未预约过」的单（appointmentDate 为空）；凡是预约过的单任何情况下不回首页；老数据中已勘测且从未预约过的单不受影响可正常预约 |
-
-## 自测结果（28 PASS / 0 FAIL）
-
-```
-PASS | 已预约单登记勘测→保持 appointed、预约日期/时段逐字一致、首页无此单、角标不变
-PASS | 待办单登记勘测→已勘测（原口径不变）
-PASS | 口径3/4：首页底池只收 pending+从未预约 surveyed；预约过的 surveyed/已预约/已完成均不回首页
-PASS | 完工链路：Appointed→Completed 进已完成页，不在已预约页、不回首页
-PASS | 真实管道：恢复出厂 143=待办6/已预约6/完成125/回收站6（v34 口径）；备份→再恢复→还原保持
-PASS | 永恒回归：7月20单/对账6570.40/实际5780.40；5月6512.4；6月8308.5；材料572/结算价30/工程师谢责强15395147568
-```
-
-工程级：`tsc --noEmit` 0 错误；`vite build` 通过（PWA 11 entries）。
-
-## 使用说明（师傅版）
-
-已预约的单子补填勘测后不会再"跑丢"了——它还躺在「已预约」页，约好的时间都在；等装完点「完工」它才去「已完成」。
+1. 勘测弹窗多了「套包米数」：原文写着"30米套包"的单子自动带出来，没有的手填一次就记住；布线米数一填，超出的部分自动算进增项（线缆敷设行，单价可改）。
+2. 发给客户的话术里，线缆只显示"布线33米，超出套餐3米×¥40=¥120"，套包里的东西不给客户摆。
+3. 所有要发出去的文本（话术/预估清单/发货单/水印名）现在都是先弹出来给你看、能改，改好再复制。
+4. 订单卡上勘测那行能看到这单套包多少米。
