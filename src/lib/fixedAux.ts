@@ -6,6 +6,7 @@
  * ============================================================ */
 
 import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
+import { DEFAULT_BREAKER_PRICE_MAP } from "./costMapping";
 
 /* ------------------------------------------------------------
  * 一、漏保规格与兜底常量
@@ -53,11 +54,12 @@ function isBreakerItem(name: string): boolean {
 }
 
 /**
- * 材料库模糊匹配漏保价（大小写不敏感），三级递退：
+ * 材料库模糊匹配漏保价（大小写不敏感），四级递退：
  * 1. 名称直接含规格串（如 "C40A"，零跑"漏电保护开关（2P C40A型…）"命中）；
  * 2. 漏保/漏电保护条目且名称含规格数字部分（25 / 40）；
  * 3. 首个漏保/漏电保护条目；
- * 全不中返回 null（任务v36.1 起不再兜底，由子窗口置空并提示绑定）。
+ * 4. v36.2-P1：前三级不中→查 DEFAULT_BREAKER_PRICE_MAP 兜底（C25=35, C40=45, C40A=55）；
+ * 全不中返回 null（由子窗口置空并提示绑定）。
  * 价格口径：成本价优先，无成本价用销售价。
  */
 export function findBreakerPrice(
@@ -82,7 +84,13 @@ export function findBreakerPrice(
 
   /* 3. 首个漏保/漏电保护条目 */
   const anyBreaker = lib.find((m) => isBreakerItem(m.name));
-  return anyBreaker ? costBasisPrice(anyBreaker) : null;
+  if (anyBreaker) return costBasisPrice(anyBreaker);
+
+  /* 4. v36.2-P1：DEFAULT_BREAKER_PRICE_MAP 兜底（规格精确匹配） */
+  const price = DEFAULT_BREAKER_PRICE_MAP[spec.trim()];
+  if (price !== undefined) return price;
+
+  return null;
 }
 
 /* ------------------------------------------------------------
