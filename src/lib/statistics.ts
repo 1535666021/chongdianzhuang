@@ -45,9 +45,8 @@ import {
   getServiceKind,
 } from "@/lib/finance";
 import type { OrderProfitResult, ServiceKind } from "@/lib/finance";
-import { queryCostPrice } from "@/lib/costMapping";
+import { findMaterialPrice } from "@/lib/costMapping";
 import {
-  loadCostMappings,
   loadMaterialUsage,
   loadMaterialsLib,
   loadPlatformRates,
@@ -124,9 +123,9 @@ function calcMonthlyFromOrders(
   yearMonth: string,
   monthOrders: Order[],
 ): MonthlyFinanceData {
-  /* 1. 配置一次读取（品牌费率 / 成本映射 / 平台扣点率 / 多平台扣点） */
+  /* 1. 配置一次读取（品牌费率 / 材料库 / 平台扣点率 / 多平台扣点） */
   const rateConfigs = loadRateConfigs();
-  const mappings = loadCostMappings();
+  const lib = loadMaterialsLib();
   const platformRates = loadPlatformRates();
   const platforms = loadPlatforms();
 
@@ -142,7 +141,7 @@ function calcMonthlyFromOrders(
       rateConfig,
       platformRates,
       platforms,
-      mappings,
+      lib,
     });
     const completion = order.completion;
     const legacy = completion?.legacyProfit;
@@ -614,9 +613,9 @@ export function getUnpaidStats(orders: Order[]): {
 export function getPlatformStats(
   orders: Order[],
 ): { platform: string; count: number; profit: number }[] {
-  /* 配置一次读取（品牌费率 / 成本映射 / 平台扣点率 / 多平台扣点） */
+  /* 配置一次读取（品牌费率 / 材料库 / 平台扣点率 / 多平台扣点） */
   const rateConfigs = loadRateConfigs();
-  const mappings = loadCostMappings();
+  const lib = loadMaterialsLib();
   const platformRates = loadPlatformRates();
   const platforms = loadPlatforms();
 
@@ -636,7 +635,7 @@ export function getPlatformStats(
       rateConfig,
       platformRates,
       platforms,
-      mappings,
+      lib,
     });
     const entry = byPlatform.get(key) ?? { platform: key, count: 0, profit: 0 };
     entry.count += 1;
@@ -658,8 +657,8 @@ export function getMaterialUsageSummary(orders: Order[]): {
   usageRecordCount: number;
   usageRecordTotal: number;
 } {
-  /* 配置一次读取：成本映射（queryCostPrice 取数）/ 领用记录 / 材料库（材料库口径预留读取） */
-  const mappings = loadCostMappings();
+  /* 配置一次读取：材料库（findMaterialPrice 取数）/ 领用记录 */
+  const lib = loadMaterialsLib();
   const usageRecords = loadMaterialUsage();
   loadMaterialsLib();
 
@@ -672,7 +671,7 @@ export function getMaterialUsageSummary(orders: Order[]): {
     for (const m of o.completion?.materials ?? []) {
       const entry = byName.get(m.name) ?? { name: m.name, quantity: 0, cost: 0 };
       entry.quantity += m.quantity;
-      entry.cost += queryCostPrice(m.name, mappings) * m.quantity;
+      entry.cost += (findMaterialPrice(m.name, lib) ?? 0) * m.quantity;
       byName.set(m.name, entry);
     }
   }

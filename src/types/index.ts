@@ -393,8 +393,6 @@ export const STORAGE_KEYS = {
   dataVersion: "cp_data_version",
   /** 品牌费率配置 */
   rateConfigs: "cp_rate_configs",
-  /** 增项成本映射 */
-  costMappings: "cp_cost_mappings",
   /** 平台扣点率 */
   platformRates: "cp_platform_rates",
   /** 品牌话术模板 */
@@ -636,16 +634,6 @@ export interface MonthlyFinanceData {
 /* ------------------------------------------------------------
  * 十四、费率与成本配置（Phase 1 数据层扩展，SettingsPage 维护）
  * ------------------------------------------------------------ */
-/** 增项→成本映射：勘测/完工模板的增项名对应成本名与成本单价 */
-export interface CostMapping {
-  /** 增项名称（模板中展示给客户/师傅的名称） */
-  addonName: string;
-  /** 对应成本名（内部核算用） */
-  costName: string;
-  /** 成本单价（元） */
-  unitPrice: number;
-}
-
 /** 品牌费率配置：套包米数与各服务类型费用 */
 export interface BrandRateConfig {
   /** 品牌 ID（关联 ChargeBrand） */

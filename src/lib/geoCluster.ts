@@ -11,11 +11,11 @@
 import { OrderStatus } from "@/types";
 import type {
   BrandRateConfig,
-  CostMapping,
   MaterialItem,
   Order,
   PlatformRateConfig,
 } from "@/types";
+import type { MatLibEntry } from "@/lib/costMapping";
 import { calcOrderProfit, DEFAULT_RATE_CONFIG } from "@/lib/finance";
 import { getBrandMaterialPack } from "@/lib/brandMaterials";
 import { loadGeoCache } from "@/lib/storage";
@@ -52,7 +52,7 @@ const AREA_NAME_RE = /([^省市]{2,6}?(?:区|县|镇|街道))/;
 export interface AreaClusterDeps {
   rateConfigs: BrandRateConfig[];
   platformRates: PlatformRateConfig;
-  mappings: CostMapping[];
+  lib: MatLibEntry[];
 }
 
 export interface AreaCluster {
@@ -174,7 +174,7 @@ function estimateOrderProfit(order: Order, deps: AreaClusterDeps): number {
     materials,
     rateConfig,
     platformRates: deps.platformRates,
-    mappings: deps.mappings,
+    lib: deps.lib,
   }).profit;
 }
 

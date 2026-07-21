@@ -8,13 +8,12 @@
 import type {
   BrandRateConfig,
   CalculationStep,
-  CostMapping,
   MaterialItem,
   Order,
   PlatformRateConfig,
   PlatformConfig,
 } from "@/types";
-import { FIXED_AUX_MATERIALS, queryCostPrice } from "@/lib/costMapping";
+import { FIXED_AUX_MATERIALS, findMaterialPrice, type MatLibEntry } from "@/lib/costMapping";
 import { getPlatformRate } from "@/lib/platforms";
 import { formatMoney } from "@/lib/utils";
 
@@ -63,15 +62,9 @@ function isPackageMaterial(name: string): boolean {
   );
 }
 
-/** 是否命中成本映射：与 costMapping.findMapping 同一匹配口径（其未导出，此处保持一致） */
-function hasCostMapping(name: string, mappings: CostMapping[]): boolean {
-  if (!name) return false;
-  if (mappings.some((m) => m.addonName === name)) return true;
-  return mappings.some(
-    (m) =>
-      m.addonName !== "" &&
-      (name.includes(m.addonName) || m.addonName.includes(name)),
-  );
+/** 是否命中材料库价格 */
+function hasMaterialPrice(name: string, lib: MatLibEntry[]): boolean {
+  return findMaterialPrice(name, lib) !== null;
 }
 
 /** 金额保留两位小数（内部计算用 number，出口字段统一 round2） */
@@ -79,22 +72,19 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/**
- * 增项材料成本（不含固定辅材）：
- * Σ queryCostPrice(材料名, mappings) × 数量；未命中映射的材料成本计 0 并记入 unmapped
- */
 export function calcMaterialCost(
   materials: MaterialItem[],
-  mappings: CostMapping[],
+  lib: MatLibEntry[],
 ): { total: number; unmapped: string[] } {
   let total = 0;
   const unmapped: string[] = [];
   for (const item of materials) {
-    if (!hasCostMapping(item.name, mappings)) {
+    const price = findMaterialPrice(item.name, lib);
+    if (price === null) {
       if (!unmapped.includes(item.name)) unmapped.push(item.name);
-      continue; // 未命中映射：成本计 0
+      continue; // 未命中：成本计 0
     }
-    total += queryCostPrice(item.name, mappings) * item.quantity;
+    total += price * item.quantity;
   }
   return { total: round2(total), unmapped };
 }
@@ -123,8 +113,8 @@ export interface CalcProfitParams {
   platformRates: PlatformRateConfig;
   /** 多平台配置（任务B）：订单 platform 全称取扣点用，缺省走旧两档 */
   platforms?: PlatformConfig[];
-  /** 增项→成本映射 */
-  mappings: CostMapping[];
+  /** 材料库 */
+  lib: MatLibEntry[];
   /** 重新核算：单单扣点率覆盖（小数），不传按平台类型 */
   platformRateOverride?: number;
 }
@@ -171,7 +161,7 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
     rateConfig,
     platformRates,
     platforms,
-    mappings,
+    lib,
     platformRateOverride,
   } = params;
 
@@ -232,7 +222,7 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
   /* 4. 材料成本：全部增项材料（含套包免费部分）+ 固定辅材一份 */
   const { total: addonMaterialCost, unmapped } = calcMaterialCost(
     materials,
-    mappings,
+    lib,
   );
   const fixedAuxCost = round2(calcFixedAuxCost());
   const materialCost = round2(addonMaterialCost + fixedAuxCost);
@@ -243,11 +233,12 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
   );
 
   /* 6. 计算步骤（金额统一 formatMoney 千分位，页面逐步展示公式与明细） */
-  const costLines = materials.map((item) =>
-    hasCostMapping(item.name, mappings)
-      ? `${item.name} = ${formatMoney(queryCostPrice(item.name, mappings))} × ${item.quantity} = ${formatMoney(queryCostPrice(item.name, mappings) * item.quantity)}`
-      : `${item.name} 未命中成本映射，成本计 ${formatMoney(0)}`,
-  );
+  const costLines = materials.map((item) => {
+    const price = findMaterialPrice(item.name, lib);
+    return price !== null
+      ? `${item.name} = ${formatMoney(price)} × ${item.quantity} = ${formatMoney(price * item.quantity)}`
+      : `${item.name} 未命中材料库，成本计 ${formatMoney(0)}`;
+  });
   const fixedAuxText = FIXED_AUX_MATERIALS.map(
     (aux) => `${aux.name}×${aux.quantity}`,
   ).join("、");

@@ -10,23 +10,16 @@
  * ============================================================ */
 
 import type {
-  CostMapping,
   FixedAuxSelection,
   MaterialItem,
 } from "@/types";
-import { FIXED_AUX_MATERIALS, queryCostPrice } from "@/lib/costMapping";
+import { FIXED_AUX_MATERIALS, findMaterialPrice, type MatLibEntry } from "@/lib/costMapping";
 import { calcMaterialCost } from "@/lib/finance";
 import { calcFixedAuxCostV2, TIE_TAPE_PACK_PRICE } from "@/lib/fixedAux";
 
 /* ------------------------------------------------------------
  * 一、兜底常量
  * ------------------------------------------------------------ */
-
-/** 电缆进价兜底（元/米）：映射未命中时使用，对齐 DEFAULT_COST_MAPPINGS 电缆=18 */
-export const CABLE_COST_FALLBACK = 18;
-
-/** PVC 管进价兜底（元/米）：映射未命中时使用，对齐 DEFAULT_COST_MAPPINGS PVC管=3.5 */
-export const PVC_COST_FALLBACK = 3.5;
 
 /** 电缆总量行名（v35.1 完工物料行）：电缆成本由 cableTotalMeters 全额计，
  *  该行从增项映射成本中剔除，防重复计成本 */
@@ -47,8 +40,8 @@ export interface CompletionMaterialCostParams {
   materials: MaterialItem[];
   /** 电缆总量（米）：全额计成本，与客户是否超米收费无关 */
   cableTotalMeters: number;
-  /** 增项→成本映射（调用方 loadCostMappings() 读取后传入） */
-  mappings: CostMapping[];
+  /** 材料库（调用方 loadMaterialsLib() 读取后传入） */
+  lib: MatLibEntry[];
   /** 固定辅材选择（Order.fixedAux 快照取值源；无值按 FIXED_AUX_MATERIALS 原样一份） */
   fixedAux?: FixedAuxSelection;
 }
@@ -100,24 +93,22 @@ export interface CompletionMaterialCostDetail {
 export function calcCompletionMaterialCostDetail(
   params: CompletionMaterialCostParams,
 ): CompletionMaterialCostDetail {
-  const { materials, cableTotalMeters, mappings, fixedAux } = params;
+  const { materials, cableTotalMeters, lib, fixedAux } = params;
 
   /* 1. 电缆全额成本（套包内也计成本，与客户收费口径无关） */
-  const cableUnitPrice =
-    queryCostPrice("电缆", mappings) || CABLE_COST_FALLBACK;
+  const cableUnitPrice = findMaterialPrice("电缆", lib) ?? 0;
   const cable = round2(cableTotalMeters * cableUnitPrice);
 
   /* 2. 非「线缆敷设」行的增项映射成本（未命中映射计 0，与 finance 同口径） */
   const addonRows = materials.filter(
     (m) => !m.name.includes(CABLE_TOTAL_ROW_NAME),
   );
-  const { total: otherCost } = calcMaterialCost(addonRows, mappings);
+  const { total: otherCost } = calcMaterialCost(addonRows, lib);
 
   /* 3. 固定辅材：有快照取值源按 V2 算，无值按 FIXED_AUX_MATERIALS 原样一份 */
-  const pvcUnitPrice =
-    queryCostPrice("PVC管", mappings) || PVC_COST_FALLBACK;
+  const pvcUnitPriceRaw = findMaterialPrice("PVC管", lib) ?? 0;
   const auxCost = fixedAux
-    ? calcFixedAuxCostV2(fixedAux, pvcUnitPrice)
+    ? calcFixedAuxCostV2(fixedAux, pvcUnitPriceRaw)
     : FIXED_AUX_MATERIALS.reduce(
         (sum, item) => sum + (item.unitPrice ?? 0) * item.quantity,
         0,
@@ -136,8 +127,8 @@ export function calcCompletionMaterialCostDetail(
       breakerUnitPrice: fixedAux.breakerPrice,
       breakerCost: round2(breakerCost),
       pvcMeters: fixedAux.pvcMeters,
-      pvcUnitPrice: round2(pvcUnitPrice),
-      pvcCost: round2(fixedAux.pvcMeters * pvcUnitPrice),
+      pvcUnitPrice: round2(pvcUnitPriceRaw),
+      pvcCost: round2(fixedAux.pvcMeters * pvcUnitPriceRaw),
       tieTapeCost: TIE_TAPE_PACK_PRICE,
       total: round2(auxCost),
     };

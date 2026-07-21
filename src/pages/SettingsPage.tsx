@@ -17,7 +17,6 @@ import { AmapSection } from "@/components/settings/AmapSection";
 import { DataSection } from "@/components/settings/DataSection";
 import { BrandSection } from "@/components/settings/BrandSection";
 import { RatesSection } from "@/components/settings/RatesSection";
-import { CostMappingSection } from "@/components/settings/CostMappingSection";
 import { PlatformSection } from "@/components/settings/PlatformSection";
 import { ScriptSection } from "@/components/settings/ScriptSection";
 import { FormPresetSection } from "@/components/settings/FormPresetSection";
@@ -36,7 +35,6 @@ type SettingsGroupKey =
   | "data"
   | "brand"
   | "rate"
-  | "cost"
   | "platform"
   | "script"
   | "formPreset"
@@ -60,7 +58,6 @@ const SETTINGS_GROUPS: SettingsGroupMeta[] = [
   { key: "data", title: "数据管理", icon: "box" },
   { key: "brand", title: "自定义品牌", icon: "edit" },
   { key: "rate", title: "费率配置", icon: "wallet" },
-  { key: "cost", title: "成本映射", icon: "chart" },
   { key: "platform", title: "平台扣点", icon: "settings" },
   { key: "script", title: "话术模板", icon: "copy" },
   { key: "formPreset", title: "表单预设", icon: "file-text" },
@@ -85,8 +82,6 @@ function SettingsGroupContent({ groupKey }: { groupKey: SettingsGroupKey }) {
       return <BrandSection />;
     case "rate":
       return <RatesSection />;
-    case "cost":
-      return <CostMappingSection />;
     case "platform":
       return <PlatformSection />;
     case "script":

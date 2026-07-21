@@ -45,7 +45,6 @@ import { addonShortNameOf } from "@/lib/addonShortName";
 import { getScript } from "@/lib/scripts";
 import {
   loadBrandScripts,
-  loadCostMappings,
   loadFormPresets,
   loadLeapmotorAddons,
   loadMaterialsLib,
@@ -86,10 +85,9 @@ export function MaterialListEditor({ items, onChange }: MaterialListEditorProps)
         freq.set(m.name, (freq.get(m.name) ?? 0) + 1);
       }
     }
-    const fromMappings = loadCostMappings().map((m) => m.addonName);
-    /* 任务D：候选 = 成本映射增项 ∪ 材料库名称（去重），按使用频率降序、同频按来源顺序 */
+    /* 候选 = 材料库名称（去重），按使用频率降序、同频按来源顺序 */
     const fromLib = materialNames(loadMaterialsLib());
-    const all = [...new Set([...fromMappings, ...fromLib])];
+    const all = [...new Set([...fromLib])];
     return all
       .map((name, index) => ({ name, index, count: freq.get(name) ?? 0 }))
       .sort((a, b) => b.count - a.count || a.index - b.index)

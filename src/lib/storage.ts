@@ -18,7 +18,6 @@ import type {
   BrandRateConfig,
   BrandScript,
   ChargeBrand,
-  CostMapping,
   CostSheetItem,
   FormPresets,
   MaterialItemLib,
@@ -30,7 +29,6 @@ import type {
   StockItem,
   StorageKey,
 } from "@/types";
-import { DEFAULT_COST_MAPPINGS } from "@/lib/costMapping";
 import {
   DEFAULT_BRAND_SCRIPTS,
   LEGACY_PLACEHOLDER_SCRIPTS,
@@ -344,15 +342,6 @@ export function saveRateConfigs(configs: BrandRateConfig[]): boolean {
   return write(STORAGE_KEYS.rateConfigs, configs);
 }
 
-/** 从未保存过时返回默认映射；用户一旦保存（哪怕空数组）以保存值为准 */
-export function loadCostMappings(): CostMapping[] {
-  return read<CostMapping[]>(STORAGE_KEYS.costMappings, DEFAULT_COST_MAPPINGS);
-}
-
-export function saveCostMappings(mappings: CostMapping[]): boolean {
-  return write(STORAGE_KEYS.costMappings, mappings);
-}
-
 /** 与 loadSettings 同款：缺字段自动回填默认值 */
 export function loadPlatformRates(): PlatformRateConfig {
   const stored = read<Partial<PlatformRateConfig>>(
@@ -490,7 +479,6 @@ export function clearAllData(): void {
     window.localStorage.removeItem(STORAGE_KEYS.customBrands);
     window.localStorage.removeItem(STORAGE_KEYS.geoCache);
     window.localStorage.removeItem(STORAGE_KEYS.rateConfigs);
-    window.localStorage.removeItem(STORAGE_KEYS.costMappings);
     window.localStorage.removeItem(STORAGE_KEYS.platformRates);
     window.localStorage.removeItem(STORAGE_KEYS.brandScripts);
     window.localStorage.removeItem(STORAGE_KEYS.materials);

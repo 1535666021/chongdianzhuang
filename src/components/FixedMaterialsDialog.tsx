@@ -16,8 +16,7 @@ import {
   defaultFixedAux,
   findBreakerPrice,
 } from "@/lib/fixedAux";
-import { findBreakerPriceInCostMappings } from "@/lib/costMapping";
-import { loadMaterialsLib, loadCostMappings } from "@/lib/storage";
+import { loadMaterialsLib } from "@/lib/storage";
 import type { FixedAuxSelection, Order } from "@/types";
 
 export interface FixedMaterialsDialogProps {
@@ -46,16 +45,15 @@ export function FixedMaterialsDialog({
   const [breakerPrice, setBreakerPrice] = useState("");
   const [pvcMeters, setPvcMeters] = useState("");
 
-  /* 材料库+成本映射：每次打开重读（设置页可能改过），换规格联动匹配用 */
+  /* 材料库：每次打开重读（设置页可能改过），换规格联动匹配用 */
   const lib = useMemo(() => (open ? loadMaterialsLib() : []), [open]);
-  const costMappings = useMemo(() => (open ? loadCostMappings() : []), [open]);
 
   /* 打开时重算初始化：已存取值源优先，否则按订单功率/品牌/用线米数默认 */
   useEffect(() => {
     if (!open) return;
     const init =
       order.fixedAux ??
-      defaultFixedAux(order, brandName, cableMeters, lib, costMappings);
+      defaultFixedAux(order, brandName, cableMeters, lib);
     setBreakerSpec(init.breakerSpec);
     /* 任务v36.1 FAIL-3：未匹配价格=null → 价格框置空（严禁自动填兜底数） */
     setBreakerPrice(
@@ -74,14 +72,12 @@ export function FixedMaterialsDialog({
     [breakerSpec],
   );
 
-  /* 换规格：价格联动——先查材料库再查成本映射（v36.2-P1 二次修正）
-   * ①命中→显示价格+可改；②均未命中→价格框置空+提示去设置页成本映射绑定，
+  /* 换规格：价格联动——查材料库
+   * ①命中→显示价格+可改；②未命中→价格框置空+提示去设置页材料库绑定，
    * 严禁自动填兜底数 */
   const handleSpecChange = (spec: string) => {
     setBreakerSpec(spec);
-    const matched =
-      findBreakerPrice(spec, lib) ??
-      findBreakerPriceInCostMappings(spec, costMappings);
+    const matched = findBreakerPrice(spec, lib);
     setBreakerPrice(matched !== null ? String(matched) : "");
   };
 
@@ -143,7 +139,7 @@ export function FixedMaterialsDialog({
         {/* 任务v36.1 FAIL-3：未匹配（空框）时明确提示绑定路径，不自动填数 */}
         {breakerPrice.trim() === "" ? (
           <div className="text-sm text-tertiary">
-            未匹配价格，请到设置页成本映射绑定
+            未匹配价格，请到设置页材料库绑定
           </div>
         ) : null}
       </div>

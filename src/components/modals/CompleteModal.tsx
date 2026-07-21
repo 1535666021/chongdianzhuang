@@ -56,9 +56,9 @@ import { getPlatformRate } from "@/lib/platforms";
 import { getScript } from "@/lib/scripts";
 import {
   loadBrandScripts,
-  loadCostMappings,
   loadFormPresets,
   loadLeapmotorAddons,
+  loadMaterialsLib,
   loadPlatformRates,
   loadPlatforms,
   loadRateConfigs,
@@ -241,7 +241,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
       materials: validMaterials,
       cableTotalMeters:
         Number(actualCable) || Number(order.survey?.cableDistance) || 0,
-      mappings: loadCostMappings(),
+      lib: loadMaterialsLib(),
       fixedAux: order.fixedAux,
     });
     const materialCost = materialBreakdown.total;

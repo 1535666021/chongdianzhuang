@@ -6,9 +6,10 @@
  * ============================================================ */
 
 import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
-import type { CostMapping } from "@/types";
 import {
-  findBreakerPriceInCostMappings,
+  findMaterialPrice,
+  DEFAULT_BREAKER_PRICE_MAP,
+  type MatLibEntry,
 } from "./costMapping";
 
 /* ------------------------------------------------------------
@@ -46,47 +47,44 @@ export function defaultBreakerSpec(powerKw: number, brandName: string): string {
  * 三、材料库漏保价模糊匹配
  * ------------------------------------------------------------ */
 
-/** 条目成本口径单价：优先成本价 costPrice，无成本价（0/缺省）用销售价 salePrice */
-function costBasisPrice(item: MaterialItemLib): number {
-  return item.costPrice > 0 ? item.costPrice : item.salePrice;
-}
-
-/** 是否漏保条目：名称含"漏保"或"漏电保护" */
-function isBreakerItem(name: string): boolean {
-  return name.includes("漏保") || name.includes("漏电保护");
-}
-
 /**
- * 材料库模糊匹配漏保价（大小写不敏感），三级递退：
- * 1. 名称直接含规格串（如 "C40A"，零跑"漏电保护开关（2P C40A型…）"命中）；
- * 2. 漏保/漏电保护条目且名称含规格数字部分（25 / 40）；
- * 3. 首个漏保/漏电保护条目；
- * 全不中返回 null（由调用方继续查成本表，最终不中提示绑定）。
+ * 材料库模糊匹配漏保价（大小写不敏感），四级递退：
+ * 1. findMaterialPrice(name, lib) 在材料库中模糊匹配
+ * 2. 简单名称匹配在材料库中查找
+ * 3. DEFAULT_BREAKER_PRICE_MAP[name]
+ * 4. 全不中返回 null
  * 价格口径：成本价优先，无成本价用销售价。
  */
 export function findBreakerPrice(
   spec: string,
-  lib: MaterialItemLib[],
+  lib: MatLibEntry[],
 ): number | null {
   const specLower = spec.trim().toLowerCase();
   if (!specLower) return null;
 
-  /* 1. 名称直接含规格串（大小写不敏感） */
-  const direct = lib.find((m) => m.name.toLowerCase().includes(specLower));
-  if (direct) return costBasisPrice(direct);
+  /* 1. 在材料库中模糊匹配 */
+  const matPrice = findMaterialPrice(spec, lib);
+  if (matPrice !== null) return matPrice;
 
-  /* 2. 漏保/漏电保护条目且含规格数字部分（如 "C25"→"25"、"C40"→"40"） */
-  const digits = spec.replace(/\D/g, "");
-  if (digits) {
-    const byDigits = lib.find(
-      (m) => isBreakerItem(m.name) && m.name.includes(digits),
-    );
-    if (byDigits) return costBasisPrice(byDigits);
+  /* 2. 简单名称匹配在材料库中查找 */
+  const simpleMatch = lib.find((m) =>
+    m.name.toLowerCase().includes(specLower) || specLower.includes(m.name.toLowerCase()),
+  );
+  if (simpleMatch) {
+    const cp = simpleMatch.costPrice;
+    const sp = simpleMatch.salePrice;
+    if (typeof cp === "number" && cp > 0) return cp;
+    if (typeof sp === "number" && sp > 0) return sp;
   }
 
-  /* 3. 首个漏保/漏电保护条目 */
-  const anyBreaker = lib.find((m) => isBreakerItem(m.name));
-  return anyBreaker ? costBasisPrice(anyBreaker) : null;
+  /* 3. 默认价格映射 */
+  const upperSpec = spec.toUpperCase();
+  if (upperSpec in DEFAULT_BREAKER_PRICE_MAP) {
+    return DEFAULT_BREAKER_PRICE_MAP[upperSpec];
+  }
+
+  /* 4. 全不中返回 null */
+  return null;
 }
 
 /* ------------------------------------------------------------
@@ -94,25 +92,20 @@ export function findBreakerPrice(
  * ------------------------------------------------------------ */
 
 /**
- * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价先查材料库再查成本映射；
- * v36.2-P1 二次修正：改用 cp_cost_mappings（v1 备份可恢复、设置页可改）
- * 替代 cp_cost_sheet（v1 备份不导出、常为空）。
+ * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价查材料库。
  *
- * 均为 null→breakerPrice=null（由子窗口置空并提示去设置页成本映射绑定）。
+ * 均为 null→breakerPrice=null（由子窗口置空并提示去设置页材料库绑定）。
  * PVC 米数默认=用线米数。
- * 材料库/成本映射由调用方读取后传入（本模块铁则不 import storage）。
+ * 材料库由调用方读取后传入（本模块铁则不 import storage）。
  */
 export function defaultFixedAux(
   order: Order,
   brandName: string,
   cableMeters: number,
-  lib: MaterialItemLib[],
-  costMappings: CostMapping[],
+  lib: MatLibEntry[],
 ): FixedAuxSelection {
   const breakerSpec = defaultBreakerSpec(order.powerKw, brandName);
-  const breakerPrice =
-    findBreakerPrice(breakerSpec, lib) ??
-    findBreakerPriceInCostMappings(breakerSpec, costMappings);
+  const breakerPrice = findBreakerPrice(breakerSpec, lib);
   return {
     breakerSpec,
     breakerPrice,

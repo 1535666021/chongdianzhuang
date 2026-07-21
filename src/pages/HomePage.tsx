@@ -54,7 +54,7 @@ import {
 import type { ParsePreviewRow } from "@/lib/parser";
 import { ParsePreviewDialog } from "@/components/ParsePreviewDialog";
 import {
-  loadCostMappings,
+  loadMaterialsLib,
   loadPlatformRates,
   loadPlatforms,
   loadRateConfigs,
@@ -172,13 +172,13 @@ export function HomePage({ onNavigate }: HomePageProps) {
   );
 
   /* 片区分组：未预约待办池按片区聚组（口径A与列表/计数同源；
-     费率/平台扣点/成本映射实时读 storage） */
+     费率/平台扣点/材料库实时读 storage） */
   const areaClusters = useMemo(
     () =>
       clusterOrdersByArea(homePool, {
         rateConfigs: loadRateConfigs(),
         platformRates: loadPlatformRates(),
-        mappings: loadCostMappings(),
+        lib: loadMaterialsLib(),
       }),
     [homePool],
   );
