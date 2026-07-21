@@ -134,3 +134,54 @@ PASS | 锁定五文件（parser/statistics/finance/migrate/costMapping）与 v36
 - **根因**：工作区根目录 `index.html` 为预构建 HTML（引用旧 `index-BehB8V2D.js`），Vite 将其作为入口重打包旧产物，而非从 `src/` 编译源码。同时 `src/src/` 嵌套旧代码目录导致 tsc 报错。
 - **修复**：① `index.html` 改为标准 Vite 入口点（`<script type="module" src="/src/main.tsx">`）；② 删除 `src/src/` 嵌套目录；③ 新增 `.gitignore` 排除 `node_modules/` 和 `dist/`
 - **验证**：`tsc --noEmit` 0 错误；`vite build` 108 模块（修复前仅 8）；构建产物 `index-uQ2eyHxL.js` 确认含 `fixedAuxItems`、`FixedMaterialsDialog`、`paddingLeft` 等全部新代码
+
+---
+
+# DELIVERY.md 追加 -- v36.2-P1 补丁：构建保护机制 + 漏保规格价格自动绑定
+
+- 版本：v36.2-P1 ｜ commit：840d647 ｜ 交付时间：2026-07-21
+- 施工模式：单代理（按任务书逐项实现 + tsc/build-check/vite 全链路自测）
+
+## 改动文件清单（改 5 + 新 1，零越界）
+
+| 文件 | 改动要点 |
+|------|---------|
+| `build-check.cjs`（新） | 构建前/后 HTML 结构完整性验证：检查 `<div id="root">`、`</head>`、`<body>` 等标签 + 源入口必须引用 `/src/main.tsx` + 产物必须含 `/chongdianzhuang/` 前缀 |
+| `.gitignore` | 新增 `index.html` 行 + 注释标注"构建红线"，防止源入口 HTML 被 dist/ 产物覆盖提交 |
+| `package.json` | build 脚本改为 `node build-check.cjs && tsc --noEmit && vite build && node build-check.cjs --check-dist`，增 `build:skip-check` 兜底 |
+| `src/lib/costMapping.ts` | 新增 `DEFAULT_BREAKER_PRICE_MAP`：C25=35 / C40=45 / C40A=55，材料库空时兜底 |
+| `src/lib/fixedAux.ts` | `findBreakerPrice` 从三级递退升级为四级：新增第 4 级查 `DEFAULT_BREAKER_PRICE_MAP` 规格精确匹配 |
+| `sw.js` | Service Worker 预缓存同步新产物 `index-D5ZqvI4E.js` |
+
+## 项1：构建保护机制
+
+- **保护面**：`build-check.cjs` 在 `tsc` 前先验证源 `index.html` 的结构完整性（root/head/body/Vite入口），在 `vite build` 后验证 `dist/index.html` 含 base 路径和 module 脚本
+- **阻断力**：任一检查不通过→ `process.exit(1)` → tsc/build 不执行
+- **恢复方法**：若源 `index.html` 被覆盖，用 `build:skip-check` 跳过检查、手动恢复后正常 `npm run build`
+
+## 项2：漏保规格价格自动绑定
+
+- **四级递退匹配**：
+  1. 材料库（localStorage）名称直接含规格串（如 "C40A"）→ 命中返回成本价
+  2. 漏保/漏电保护条目含规格数字（25/40/40A）
+  3. 首个漏保/漏电保护条目
+  4. v36.2-P1 新增：`DEFAULT_BREAKER_PRICE_MAP`（C25=35 / C40=45 / C40A=55）
+- **用户体验**：用户未配置材料库时，弹窗中选漏保即自动填入默认单价；材料库有对应条目时优先用材料库价；均可手改覆盖
+
+## 自测结果（6 PASS / 0 FAIL + 回归基线）
+
+```
+PASS | build-check.cjs 源入口验证通过（<div id="root"> / </head> / src="/src/main.tsx"）
+PASS | build-check.cjs --check-dist 产物验证通过（/chongdianzhuang/ 前缀 / <script type="module">）
+PASS | tsc --noEmit 0 错误
+PASS | vite build 通过（PWA 7 entries，108模块，产物 index-D5ZqvI4E.js）
+PASS | npm run build 全链路通过（check → tsc → build → check-dist）
+PASS | 锁定四文件（parser/statistics/finance/migrate）零 diff
+```
+
+## 部署链
+
+- GitHub Pages 线上地址：`https://1535666021.github.io/chongdianzhuang/`
+- 产物 JS：`index-D5ZqvI4E.js`（357KB）
+- registerSW.js：scope/路径已修正为 `/chongdianzhuang/`
+- CDN 缓存：max-age=600（10分钟后新用户命中新版本）
