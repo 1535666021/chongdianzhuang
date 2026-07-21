@@ -6,8 +6,10 @@
  * ============================================================ */
 
 import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
-import type { CostTableEntry } from "./costMapping";
-import { findBreakerPriceInCostSheet } from "./costMapping";
+import type { CostMapping } from "@/types";
+import {
+  findBreakerPriceInCostMappings,
+} from "./costMapping";
 
 /* ------------------------------------------------------------
  * 一、漏保规格与兜底常量
@@ -92,23 +94,25 @@ export function findBreakerPrice(
  * ------------------------------------------------------------ */
 
 /**
- * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价先查材料库再查成本表；
- * 任务v36.1 FAIL-3：均为 null→breakerPrice=null（严禁自动填兜底数，
- * 由子窗口置空并提示「未匹配价格，请到设置页成本表绑定」），
+ * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价先查材料库再查成本映射；
+ * v36.2-P1 二次修正：改用 cp_cost_mappings（v1 备份可恢复、设置页可改）
+ * 替代 cp_cost_sheet（v1 备份不导出、常为空）。
+ *
+ * 均为 null→breakerPrice=null（由子窗口置空并提示去设置页成本映射绑定）。
  * PVC 米数默认=用线米数。
- * 材料库/成本表由调用方读取后传入（本模块铁则不 import storage）。
+ * 材料库/成本映射由调用方读取后传入（本模块铁则不 import storage）。
  */
 export function defaultFixedAux(
   order: Order,
   brandName: string,
   cableMeters: number,
   lib: MaterialItemLib[],
-  costSheet: CostTableEntry[],
+  costMappings: CostMapping[],
 ): FixedAuxSelection {
   const breakerSpec = defaultBreakerSpec(order.powerKw, brandName);
   const breakerPrice =
     findBreakerPrice(breakerSpec, lib) ??
-    findBreakerPriceInCostSheet(breakerSpec, costSheet);
+    findBreakerPriceInCostMappings(breakerSpec, costMappings);
   return {
     breakerSpec,
     breakerPrice,

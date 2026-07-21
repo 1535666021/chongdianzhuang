@@ -35,9 +35,15 @@ export const DEFAULT_COST_MAPPINGS: CostMapping[] = [
 
 /* ------------------------------------------------------------
  * 二增、从成本表查漏保价格（v36.2-P1 修正：查 cp_cost_sheet，非硬编码）
- *   用途：材料库（loadMaterialsLib）未绑定时，查成本表（loadCostSheet）兜底
- *   规则：成本条目 name 含"漏保"类关键词 + 规格串或数字匹配
- *   匹配成功自动填入单价，匹配失败返回 null（由子窗口置空并提示去绑定）
+ *   保留作用：当 cp_cost_sheet 有数据（v7老备份）时可用，v1 备份不导出此表常为空
+ * ------------------------------------------------------------
+ * 二增2、从成本映射查漏保价格（v36.2-P1 二次修正：查 cp_cost_mappings）
+ *   用途：成本映射表（设置页「成本映射」可编辑，v1 备份导出后可通过
+ *         importBackup 恢复 DEFAULT_COST_MAPPINGS）作为主兜底；
+ *   规则：addonName 含"漏保"类关键词 + 规格串或数字匹配
+ *   匹配成功自动填入单价，匹配失败返回 null（提示去设置页成本映射绑定）
+ * ------------------------------------------------------------
+ *   查价顺序：材料库 → 成本映射（v1 备份可恢复+设置页可改）
  * ------------------------------------------------------------ */
 
 /** 成本表条目最小契约（CostSheetItem 子集，本模块不入 storage 铁则） */
@@ -46,9 +52,18 @@ export interface CostTableEntry {
   costPrice: number;
 }
 
-/** 是否漏保类条目：name 含"漏保"或"漏电保护" */
+/** 是否漏保类条目：name/addonName 含"漏保"或"漏电保护" */
 function isBreakerName(name: string): boolean {
   return name.includes("漏保") || name.includes("漏电保护");
+}
+
+/** 是否漏保类映射：addonName 含"漏保"类关键词 */
+function isBreakerMapping(addonName: string): boolean {
+  return (
+    addonName.includes("漏保") ||
+    addonName.includes("漏电") ||
+    addonName.includes("空气开关")
+  );
 }
 
 /**
@@ -83,6 +98,43 @@ export function findBreakerPriceInCostSheet(
   /* 3. 首个漏保类条目 */
   const any = costSheet.find((c) => isBreakerName(c.name));
   return any ? any.costPrice : null;
+}
+
+/**
+ * v36.2-P1 二次修正：在成本映射表中搜索漏保价格（三级递退）：
+ * 1. addonName 直接含规格串（如 "漏保 C40A"、含"C25"）；
+ * 2. addonName 含"漏保/漏电/空气开关"关键词 + 规格数字（25/40）；
+ * 3. 首个漏保/空开类映射；
+ * 全不中返回 null（提示去设置页成本映射绑定）。
+ *
+ * 这张表是 v1 备份导入时由 DEFAULT_COST_MAPPINGS 兜底、设置页可编辑的，
+ * 是所有用户都能访问的表，比 cp_cost_sheet 更适合做兜底。
+ */
+export function findBreakerPriceInCostMappings(
+  spec: string,
+  mappings: CostMapping[],
+): number | null {
+  const specLower = spec.trim().toLowerCase();
+  if (!specLower) return null;
+
+  /* 1. addonName 直接含规格串 */
+  const direct = mappings.find((m) =>
+    m.addonName.toLowerCase().includes(specLower),
+  );
+  if (direct) return direct.unitPrice;
+
+  /* 2. 漏保/空开类映射且 addonName 含规格数字 */
+  const digits = spec.replace(/\D/g, "");
+  if (digits) {
+    const byDigits = mappings.find(
+      (m) => isBreakerMapping(m.addonName) && m.addonName.includes(digits),
+    );
+    if (byDigits) return byDigits.unitPrice;
+  }
+
+  /* 3. 首个漏保/空开类映射 */
+  const any = mappings.find((m) => isBreakerMapping(m.addonName));
+  return any ? any.unitPrice : null;
 }
 
 /* ------------------------------------------------------------
