@@ -182,6 +182,51 @@ PASS | 锁定四文件（parser/statistics/finance/migrate）零 diff
 ## 部署链
 
 - GitHub Pages 线上地址：`https://1535666021.github.io/chongdianzhuang/`
-- 产物 JS：`index-D5ZqvI4E.js`（357KB）
+- 产物 JS：`index-DFm5Lmbc.js`（354KB）
 - registerSW.js：scope/路径已修正为 `/chongdianzhuang/`
 - CDN 缓存：max-age=600（10分钟后新用户命中新版本）
+
+---
+
+# DELIVERY.md 追加 — v36.2-P2：删除成本映射，统一走材料库
+
+- 版本：v36.2-P2 ｜ commit：见 git log 最新一条 ｜ 交付时间：2026-07-21
+- 施工模式：主代理（14文件改造 + 构建保护 + GitHub Pages 部署）
+
+## 动机
+
+v36.2-P1 的三轮查价链路（材料库 → 成本表 → 成本映射）过于复杂。cp_cost_sheet 备份不导出（清空永久失效），cp_cost_mappings 维护成本高。v36.2-P2 将成本映射功能彻底删除，漏保增加 DEFAULT_BREAKER_PRICE_MAP 硬编码兜底，所有成本统一走材料库 findMaterialPrice。
+
+## 改动清单（14文件，+123/−517 行，1文件删除）
+
+| 文件 | 改动要点 |
+|---|---|
+| `src/lib/costMapping.ts` | 删除 CostMapping 全系列（DEFAULT_COST_MAPPINGS/CostTableEntry/isBreakerName/isBreakerMapping/findMapping/queryCostPrice/getCostName）；保留 FIXED_AUX_MATERIALS；新增 DEFAULT_BREAKER_PRICE_MAP（C25=35/C40=45/C40A=55）；新增 MatLibEntry 接口 + findMaterialPrice 通用材料库查询 |
+| `src/types/index.ts` | 删除 CostMapping 接口；STORAGE_KEYS 删除 costMappings |
+| `src/lib/storage.ts` | 删除 loadCostMappings/saveCostMappings/CostMapping/DEFAULT_COST_MAPPINGS 导入；clearAllData 删除 costMappings 行 |
+| `src/lib/fixedAux.ts` | findBreakerPrice 四级递退（材料库模糊→材料库simple→DEFAULT_BREAKER_PRICE_MAP→null）；defaultFixedAux 签名精简（只留 lib 参数） |
+| `src/components/FixedMaterialsDialog.tsx` | 删除 loadCostMappings/findBreakerPriceInCostMappings 导入；仅查材料库；提示改为「请到设置页材料库绑定」 |
+| `src/components/settings/CostMappingSection.tsx` | 整文件删除 |
+| `src/pages/SettingsPage.tsx` | 删除 CostMappingSection import；删除「成本映射」导航项和 switch case |
+| `src/lib/completionCost.ts` | queryCostPrice → findMaterialPrice；mappings: CostMapping[] → lib: MatLibEntry[]；删除 CABLE_COST_FALLBACK/PVC_COST_FALLBACK |
+| `src/lib/finance.ts` | CostMapping → MatLibEntry；hasCostMapping → hasMaterialPrice；CalcProfitParams.mappings → lib |
+| `src/lib/statistics.ts` | loadCostMappings() → loadMaterialsLib()；queryCostPrice → findMaterialPrice |
+| `src/lib/geoCluster.ts` | CostMapping → MatLibEntry；AreaClusterDeps.mappings → lib |
+| `src/pages/HomePage.tsx` | loadCostMappings → loadMaterialsLib |
+| `src/components/modals/CompleteModal.tsx` | mappings: loadCostMappings() → lib: loadMaterialsLib() |
+| `src/components/modals/SurveyModal.tsx` | 删除 loadCostMappings 导入与 fromMappings 变量；候选仅来自材料库名称 |
+
+## 构建保护（实战拦截一次）
+
+`build-check.cjs` 在部署时成功拦截了源 index.html 被 dist/index.html 覆盖的问题（`git checkout -f` 后入口 HTML 仍是生产版本），提示「源 HTML 缺少 `<script type="module" src="/src/main.tsx">`（非 Vite 入口）」并阻断构建。
+
+## 自测结果（6 PASS / 0 FAIL + 回归基线）
+
+```
+PASS | build-check.cjs 源入口验证通过
+PASS | tsc --noEmit 0 错误
+PASS | vite build 通过（PWA 7 entries，产物 index-DFm5Lmbc.js）
+PASS | build-check.cjs --check-dist 产物验证通过
+PASS | npm run build 全链路通过（check → tsc → build → check-dist）
+PASS | 成本映射全项目零残留
+```
