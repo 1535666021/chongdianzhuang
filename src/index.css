@@ -1,0 +1,1849 @@
+/* ============================================================
+ * 充电桩订单助手 · 全局样式
+ * 阶段1：全局色值、圆角、间距、字体变量 + 基础重置 + 通用组件样式
+ * 规范：所有页面/组件只允许引用本文件的 CSS 变量，禁止硬编码色值/尺寸
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * 一、设计变量（Design Tokens）
+ * ------------------------------------------------------------ */
+:root {
+  /* ---- 品牌主色：低饱和能源绿 ---- */
+  --color-primary: #2e7d5b;
+  --color-primary-hover: #276b4e;
+  --color-primary-active: #1f5a41;
+  --color-primary-light: #e3f0ea;
+  --color-primary-border: #bcd8cc;
+
+  /* ---- 辅助强调色：暖琥珀（用于提醒/待办强调） ---- */
+  --color-accent: #c99435;
+  --color-accent-light: #f7eeda;
+  --color-accent-border: #e6d3ab;
+
+  /* ---- 中性色：暖灰体系 ---- */
+  --color-bg-page: #f6f4ef;
+  --color-bg-surface: #ffffff;
+  --color-bg-muted: #efece5;
+  --color-bg-mask: rgba(35, 32, 28, 0.45);
+
+  --color-text-primary: #2b2a26;
+  --color-text-secondary: #6f6c64;
+  --color-text-tertiary: #a09c92;
+  --color-text-inverse: #ffffff;
+
+  --color-border: #e4e0d6;
+  --color-border-strong: #d2cdc0;
+  --color-divider: #eeeae1;
+
+  /* ---- 语义状态色 ---- */
+  --color-success: #3e8e5a;
+  --color-success-light: #e4f1e8;
+  --color-warning: #c08a2e;
+  --color-warning-light: #f8efdc;
+  --color-danger: #bf5340;
+  --color-danger-light: #f8e7e3;
+  --color-info: #4a7ba6;
+  --color-info-light: #e6eef5;
+
+  /* ---- 订单状态色（与 types/index.ts 状态枚举一一对应） ---- */
+  --color-status-pending: #c08a2e;
+  --color-status-pending-bg: #f8efdc;
+  --color-status-surveyed: #4a7ba6;
+  --color-status-surveyed-bg: #e6eef5;
+  --color-status-appointed: #7a6aa8;
+  --color-status-appointed-bg: #ece8f4;
+  --color-status-completed: #3e8e5a;
+  --color-status-completed-bg: #e4f1e8;
+  --color-status-cancelled: #8a857a;
+  --color-status-cancelled-bg: #efede7;
+
+  /* ---- 圆角 ---- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ---- 间距刻度 ---- */
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-xxl: 24px;
+  --space-xxxl: 32px;
+
+  /* ---- 字体 ---- */
+  --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 22px;
+  --font-size-title: 26px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  --line-height-tight: 1.3;
+  --line-height-normal: 1.5;
+
+  /* ---- 阴影 ---- */
+  --shadow-sm: 0 1px 2px rgba(43, 42, 38, 0.05);
+  --shadow-md: 0 2px 8px rgba(43, 42, 38, 0.08);
+  --shadow-lg: 0 6px 20px rgba(43, 42, 38, 0.12);
+  --shadow-modal: 0 12px 40px rgba(43, 42, 38, 0.18);
+
+  /* ---- 布局尺寸 ---- */
+  --page-max-width: 640px;
+  --tab-bar-height: 56px;
+  --header-height: 52px;
+  --touch-target-min: 44px;
+
+  /* ---- 底部安全区（PWA / 全面屏） ---- */
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* ---- 动效 ---- */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --z-index-sticky: 10;
+  --z-index-modal-mask: 90;
+  --z-index-modal: 100;
+  --z-index-toast: 200;
+}
+
+/* ------------------------------------------------------------
+ * 二、基础重置
+ * ------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+ul, ol {
+  list-style: none;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  outline: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------
+ * 三、布局骨架
+ * ------------------------------------------------------------ */
+
+/* 页面容器：移动端居中，桌面限制最大宽度 */
+.app-shell {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--color-bg-page);
+  position: relative;
+  box-shadow: var(--shadow-md);
+}
+
+/* 页面主体（底部留出导航高度 + 安全区） */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(
+    var(--tab-bar-height) + var(--safe-area-bottom) + var(--space-lg)
+  );
+}
+
+.page-body {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* 页面顶部标题栏 */
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-sticky);
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.page-header__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.page-header__extra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ------------------------------------------------------------
+ * 四、底部导航（Tab Bar）
+ * ------------------------------------------------------------ */
+.tab-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 100%;
+  max-width: var(--page-max-width);
+  height: calc(var(--tab-bar-height) + var(--safe-area-bottom));
+  padding-bottom: var(--safe-area-bottom);
+  display: flex;
+  background-color: var(--color-bg-surface);
+  border-top: 1px solid var(--color-divider);
+  z-index: var(--z-index-sticky);
+}
+
+.tab-bar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xxs);
+  min-height: var(--touch-target-min);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  transition: color var(--transition-fast);
+  position: relative;
+}
+
+.tab-bar__item--active {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.tab-bar__icon {
+  font-size: var(--font-size-xxl);
+  line-height: 1;
+}
+
+/* 导航角标（如待办数量） */
+.tab-bar__badge {
+  position: absolute;
+  top: var(--space-xs);
+  right: calc(50% - 22px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-full);
+  background-color: var(--color-danger);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-xs);
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------
+ * 五、通用组件样式
+ * ------------------------------------------------------------ */
+
+/* ---- 卡片 ---- */
+.card {
+  background-color: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+.card--flat {
+  box-shadow: none;
+}
+
+.card--clickable {
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.card--clickable:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-md);
+}
+
+.card__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-sm);
+}
+
+/* ---- 按钮 ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast),
+    opacity var(--transition-fast);
+  user-select: none;
+}
+
+.btn:active {
+  opacity: 0.85;
+}
+
+.btn--primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.btn--primary:active {
+  background-color: var(--color-primary-active);
+}
+
+.btn--secondary {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.btn--outline {
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+}
+
+.btn--danger {
+  background-color: var(--color-danger);
+  color: var(--color-text-inverse);
+}
+
+.btn--danger-outline {
+  background-color: var(--color-bg-surface);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--color-primary);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.btn--sm {
+  min-height: 32px;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-xs);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--disabled,
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- 表单：输入框 / 文本域 / 选择器 ---- */
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-item__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.form-item__label--required::before {
+  content: "*";
+  color: var(--color-danger);
+  margin-right: var(--space-xxs);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-surface);
+  font-size: var(--font-size-md);
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  border-color: var(--color-primary);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: var(--line-height-normal);
+}
+
+.input--error,
+.textarea--error {
+  border-color: var(--color-danger);
+}
+
+.form-item__error {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+/* ---- 搜索栏（首页内置搜索使用） ---- */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.search-bar__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-md);
+  min-height: 28px;
+}
+
+/* ---- 筛选 chips（首页内置筛选用） ---- */
+.filter-chips {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding: var(--space-xs) 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex-shrink: 0;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.chip--active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ---- 状态标签 ---- */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-xxs) var(--space-sm);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+}
+
+.tag--pending {
+  color: var(--color-status-pending);
+  background-color: var(--color-status-pending-bg);
+}
+
+.tag--surveyed {
+  color: var(--color-status-surveyed);
+  background-color: var(--color-status-surveyed-bg);
+}
+
+.tag--appointed {
+  color: var(--color-status-appointed);
+  background-color: var(--color-status-appointed-bg);
+}
+
+.tag--completed {
+  color: var(--color-status-completed);
+  background-color: var(--color-status-completed-bg);
+}
+
+.tag--cancelled {
+  color: var(--color-status-cancelled);
+  background-color: var(--color-status-cancelled-bg);
+}
+
+.tag--info {
+  color: var(--color-info);
+  background-color: var(--color-info-light);
+}
+
+.tag--danger {
+  color: var(--color-danger);
+  background-color: var(--color-danger-light);
+}
+
+/* ---- 列表项（订单卡片行等） ---- */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.list-item__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.list-item__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-item__desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-item__extra {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xxxl) var(--space-xl);
+  gap: var(--space-md);
+  color: var(--color-text-tertiary);
+}
+
+.empty-state__icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.empty-state__text {
+  font-size: var(--font-size-md);
+}
+
+/* ---- 弹窗（所有业务弹窗统一基座样式） ---- */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg-mask);
+  z-index: var(--z-index-modal-mask);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* 遮罩固定不滚动：溢出隐藏 + 阻断滚动链穿透 */
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.modal {
+  width: 100%;
+  /* 横向铁规：任何视口下不超屏（375px 实测 = 375px） */
+  max-width: min(var(--page-max-width), 100vw);
+  /* 纵向铁规：100dvh 减去底部导航 + 底部安全区，任何手机不超屏 */
+  max-height: calc(100vh - var(--tab-bar-height) - var(--safe-area-bottom));
+  max-height: calc(100dvh - var(--tab-bar-height) - var(--safe-area-bottom));
+  background-color: var(--color-bg-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-modal);
+  z-index: var(--z-index-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 内容滚动限制在 .modal__body 内部，不向遮罩/页面穿透 */
+  overscroll-behavior: contain;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--color-divider);
+  flex-shrink: 0;
+}
+
+.modal__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.modal__close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xl);
+  transition: background-color var(--transition-fast);
+}
+
+.modal__close:active {
+  background-color: var(--color-bg-muted);
+}
+
+.modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal__footer {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  padding-bottom: calc(var(--space-md) + var(--safe-area-bottom));
+  border-top: 1px solid var(--color-divider);
+  flex-shrink: 0;
+}
+
+.modal__footer .btn {
+  flex: 1;
+}
+
+/* ---- Toast 轻提示 ---- */
+.toast {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-sm);
+  background-color: rgba(43, 42, 38, 0.85);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-md);
+  z-index: var(--z-index-toast);
+  max-width: 80%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- 分段统计数字（统计页/首页概览用） ---- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.stat-card {
+  background-color: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card__value {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  line-height: var(--line-height-tight);
+}
+
+.stat-card__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ------------------------------------------------------------
+ * 六、工具类（高频复用，避免页面重复定义）
+ * ------------------------------------------------------------ */
+.flex {
+  display: flex;
+}
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.gap-xs { gap: var(--space-xs); }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+.text-primary-color {
+  color: var(--color-primary);
+}
+.text-danger {
+  color: var(--color-danger);
+}
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+.text-lg {
+  font-size: var(--font-size-lg);
+}
+.text-bold {
+  font-weight: var(--font-weight-bold);
+}
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.text-center {
+  text-align: center;
+}
+
+/* ------------------------------------------------------------
+ * 七、动效（弹窗/页面过渡，供 React 过渡类名使用）
+ * ------------------------------------------------------------ */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.anim-fade-in {
+  animation: fade-in var(--transition-normal);
+}
+
+.anim-slide-up {
+  animation: slide-up var(--transition-normal);
+}
+
+/* ------------------------------------------------------------
+ * 手机端专项优化（本应用主用端为手机/户外作业）
+ * ------------------------------------------------------------ */
+
+/* 输入控件 16px：防止 iOS Safari 聚焦时自动放大页面 */
+.input,
+.textarea,
+.select {
+  font-size: 16px;
+}
+
+/* 订单卡标签行：允许换行（服务类型等长标签在窄屏不溢出） */
+.order-card__tags {
+  flex-wrap: wrap;
+}
+
+/* 长文本标签：允许折行显示完整内容 */
+.tag--wide {
+  white-space: normal;
+  word-break: break-all;
+}
+
+/* 卡片行内按钮组：窄屏不挤压收缩 */
+.order-card__actions {
+  flex-shrink: 0;
+}
+
+/* 可点击复制区域：去默认高亮 + 触摸反馈 */
+.copyable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.copyable:active {
+  opacity: 0.6;
+}
+
+/* 小按钮触摸目标提升：32px → 36px（手机辅助按钮易点且不破坏密度） */
+.btn--sm {
+  min-height: 36px;
+}
+
+
+/* ============================================================
+ * 统计页财务概览 + 利润弹窗样式
+ * ============================================================ */
+
+/* 财务数字色（统计卡片专用） */
+.stat-value--blue {
+  color: #2196f3;
+}
+
+.stat-value--purple {
+  color: #9c27b0;
+}
+
+.stat-value--green {
+  color: #4caf50;
+}
+
+.stat-value--orange {
+  color: #ff9800;
+}
+
+.stat-value--lightblue {
+  color: #03a9f4;
+}
+
+/* 可点击统计卡片：pointer + 按压反馈 */
+.stat-card--clickable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--transition-normal, 0.2s);
+}
+
+.stat-card--clickable:active {
+  transform: scale(0.97);
+}
+
+/* 月份选择器：白底、圆角、全宽、16px（防 iOS 聚焦放大） */
+.month-select {
+  width: 100%;
+  padding: var(--space-sm, 12px);
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--color-border, #e0e0e0);
+  background: #fff;
+  font-size: 16px;
+}
+
+/* 导出按钮：绿底白字全宽圆角（手机端 min-height 44px） */
+.btn--export {
+  width: 100%;
+  padding: 14px;
+  min-height: 44px;
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 12px);
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn--export:active {
+  opacity: 0.85;
+}
+
+/* 利润弹窗区块 */
+.profit-section {
+  border-radius: var(--radius-md, 12px);
+  padding: var(--space-sm, 12px);
+  margin-bottom: var(--space-sm, 12px);
+}
+
+.profit-section--income {
+  background: #e8f5e9;
+}
+
+.profit-section--deduction {
+  background: #fff3e0;
+}
+
+.profit-section--cost {
+  background: #ffebee;
+}
+
+.profit-section--steps {
+  background: #f5f5f5;
+}
+
+.profit-section__title {
+  font-weight: 600;
+  margin-bottom: var(--space-xs, 8px);
+}
+
+.profit-section--income .profit-section__title {
+  color: #4caf50;
+}
+
+.profit-section--deduction .profit-section__title {
+  color: #ff9800;
+}
+
+.profit-section--cost .profit-section__title {
+  color: #f44336;
+}
+
+.profit-section__desc {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #999);
+  margin-top: 4px;
+}
+
+.profit-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.profit-row--total {
+  border-top: 1px solid var(--color-border, #e0e0e0);
+  margin-top: 8px;
+  padding-top: 8px;
+  font-weight: 600;
+}
+
+.profit-row__amount--negative {
+  color: #f44336;
+}
+
+.profit-steps__step {
+  margin-bottom: var(--space-xs, 8px);
+}
+
+.profit-steps__line {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.profit-steps__result {
+  font-weight: 600;
+}
+
+.profit-steps__empty {
+  font-size: 13px;
+  color: var(--color-text-tertiary, #999);
+}
+
+/* ============================================================
+ * 设置页扩展区块：费率配置（按品牌）/ 成本映射 / 平台扣点
+ * 规范：仅引用既有 CSS 变量；输入框沿用 .input（16px 防 iOS 缩放），
+ *      行内按钮沿用 .btn--sm（min-height 36px 触摸目标）
+ * ============================================================ */
+
+/* 次级行容器：卡片内的浅灰底分组（费率行 / 成本映射行共用） */
+.rate-row,
+.cost-map-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background-color: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+}
+
+/* 新增映射行：白底虚线框，与已保存行区分 */
+.cost-map-row--new {
+  background-color: var(--color-bg-surface);
+  border: 1px dashed var(--color-border-strong);
+}
+
+/* 费率行头部：品牌名 + 保存按钮 */
+.rate-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.rate-row__head .btn {
+  flex-shrink: 0;
+}
+
+.rate-row__brand {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+}
+
+/* 费率四字段：手机端 2×2 网格 */
+.rate-row__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.rate-row__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.rate-row__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* 成本映射行：主行（增项名 + 操作按钮），次行（成本名 + 单价） */
+.cost-map-row__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.cost-map-row__main .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cost-map-row__main .btn {
+  flex-shrink: 0;
+}
+
+.cost-map-row__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+/* 平台扣点：两个百分比输入并排 */
+.platform-rate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+
+/* ============================================================
+ * 已预约页三分组：今天待装（路线排序）/ 未来预约 / 过期未装（标红）
+ * 规范：仅引用既有 CSS 变量；操作行按钮沿用 .btn--sm
+ * ============================================================ */
+
+/* 分组容器：组标题 + 组内订单（卡片 + 页面级操作行）纵向排列 */
+.appt-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* 相邻分组加大间距，强化分组边界 */
+.appt-group + .appt-group {
+  margin-top: var(--space-sm);
+}
+
+/* 组标题：如「今天待装（2）」 */
+.appt-group__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+}
+
+/* 过期未装组标题：红色警示 */
+.appt-group__title--overdue {
+  color: var(--color-danger);
+}
+
+/* 过期未装组卡片：淡红底 + 左侧红色边条标识 */
+.appt-group--overdue .card {
+  background-color: var(--color-danger-light);
+  border-left: var(--space-xs) solid var(--color-danger);
+}
+
+/* 卡片下方页面级操作行：一键导航 / 改期 / 重新预约 / 回退已勘测 等 */
+.appt-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+/* ------------------------------------------------------------
+ * 设置页 · 话术模板编辑器
+ * ------------------------------------------------------------ */
+
+/* 场景页签：分段控件（上门前 / 勘测完成 / 安装完成） */
+.script-editor__tabs {
+  display: flex;
+  gap: var(--space-xxs);
+  padding: var(--space-xxs);
+  background-color: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+}
+
+.script-editor__tab {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.script-editor__tab--active {
+  background-color: var(--color-bg-surface);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 变量提示区：小字、自动换行排列 */
+.script-editor__vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+}
+
+/* ============================================================
+ * 首页 · 片区推荐卡片（geoCluster 聚组 + 组内批量预约）
+ * 规范：仅引用既有 CSS 变量；按钮沿用 .btn--sm（36px 触摸目标），
+ *      输入框沿用 .input/.select（16px 防 iOS 聚焦缩放）
+ * ============================================================ */
+
+/* 片区卡片：头部 + 展开区（订单清单 / 批量预约）纵向排列 */
+.area-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* 卡片头部：标题 / 预估利润两端对齐，整行可点击展开收起 */
+.area-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 头部标题：片区名 + 单数 + 组内距离 */
+.area-card__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 头部预估利润：主色强调 */
+.area-card__profit {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+/* 展开订单清单：顶部分隔线与头部区分 */
+.area-card__list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* 清单行：左侧客户名 / 地址，右侧状态标签 */
+.area-card__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.area-card__item:last-child {
+  border-bottom: none;
+}
+
+/* 批量预约区：日期 / 时段 / 师傅 / 按钮，窄屏自动换行 */
+.area-batch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* 回收站状态标签（任务C） */
+.tag--trash {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-muted);
+}
+
+/* ============================================================
+ * 八、阶段2-J1 设计系统扩充（纯增量：仅新增变量与 class，
+ *    不改/删既有任何变量与 class 名，后续页面重构 J2 直接消费本段）
+ * 说明：--radius-lg（16px）与 --color-bg-mask（弹窗遮罩）在第一节
+ *      :root 已定义，按规范直接复用，本段不重复声明。
+ * ============================================================ */
+
+:root {
+  /* ---- 数字间距网格（4px 基网，J2 起页面布局优先使用；
+   *      与既有 --space-xs~xxxl 命名刻度等值并存，互不冲突） ---- */
+  --space-1: 4px;  /* = --space-xs */
+  --space-2: 8px;  /* = --space-sm */
+  --space-3: 12px; /* = --space-md */
+  --space-4: 16px; /* = --space-lg */
+  --space-5: 20px; /* = --space-xl */
+  --space-6: 24px; /* = --space-xxl */
+
+  /* ---- 字阶（J2 页面统一排版刻度，禁再散写 px） ---- */
+  --fs-page-title: 17px; /* 页面大标题（page-header 主标题） */
+  --fs-card-title: 15px; /* 卡片标题 */
+  --fs-body: 14px;       /* 正文 */
+  --fs-aux: 12px;        /* 辅助说明 / 次要信息 */
+  --fs-money: 17px;      /* 金额数字（须配 --fw-semibold） */
+  --fw-semibold: 600;    /* 半粗：金额 / 统计数字 / 强调 */
+}
+
+/* ------------------------------------------------------------
+ * 按钮四级系统（J2 全站按钮统一规范）
+ * 层级约定：
+ *   ① 主按钮实心 .btn--primary（既有）：每个视觉区域最多 1 个，承担唯一主操作
+ *   ② 次按钮描边 .btn--outline（既有）：与主按钮并排的次级操作
+ *   ③ 文字按钮 .btn--text（本段新增）：弱操作（展开收起 / 查看更多），无底无边
+ *   ④ 危险按钮 .btn--danger（既有）：删除 / 取消等破坏性操作
+ *      ⚠ 物理隔离规范：危险按钮禁止与主按钮相邻紧挨——弹窗 footer 中须用
+ *        弹性占位（.flex-1）或其他按钮隔开（如危险居左、主操作居右）；
+ *        操作行中危险按钮一律放最末尾，防止误触。
+ * 按压反馈：全部按钮 :active 均有下沉反馈——基座 .btn:active 透明度下沉
+ * （既有规则），本段新增层级/尺寸档再叠加 transform: scale(0.97)。
+ * ------------------------------------------------------------ */
+
+/* ③ 文字按钮：弱操作，无底色无边框，active 时主色加深 */
+.btn--text {
+  padding: var(--space-2) var(--space-3);
+  background-color: transparent;
+  color: var(--color-primary);
+  transition: transform var(--transition-fast),
+    color var(--transition-fast), opacity var(--transition-fast);
+}
+
+/* 尺寸档（与 .btn + 层级类组合，如 class="btn btn--primary btn--lg"） */
+
+/* .btn--lg：页面级 / 弹窗主操作——48px 高 + 全宽（一处一个，承载页面唯一主操作） */
+.btn--lg {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-lg);
+  font-weight: var(--fw-semibold);
+  transition: transform var(--transition-fast),
+    background-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+/* .btn--md：卡片主按钮——40px 高（卡片行内主操作，不撑满宽） */
+.btn--md {
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-body);
+  transition: transform var(--transition-fast),
+    background-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+/* .btn--icon：纯图标按钮——24px 图标（Icon 组件 size=24）+ 44px 触控热区
+ * 用途：拨号 / 导航 / 复制 / ⋯更多 / 头部入口（如首页材料库入口） */
+.btn--icon {
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-fast),
+    background-color var(--transition-fast), color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+/* 按压反馈：新层级/尺寸档统一 scale(0.97) 下沉（基座透明度下沉同时生效） */
+.btn--text:active,
+.btn--lg:active,
+.btn--md:active,
+.btn--icon:active {
+  transform: scale(0.97);
+}
+
+.btn--text:active {
+  color: var(--color-primary-active);
+}
+
+/* 图标按钮按压：浅灰底 + 图标色加深，强化触达反馈 */
+.btn--icon:active {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-primary);
+}
+
+/* .btn--loading：异步防重点击——提交/保存进行中挂上，
+ * 禁指针事件 + 透明度降（建议同时设 disabled 属性双保险） */
+.btn--loading,
+.btn--loading:active {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------
+ * 迷你统计条 .stat-mini（J2 页面顶部概览：一排 4 项，约 56px 高）
+ * 结构：.stat-mini > .stat-mini__item ×4（__value 数字 + __label 文案）
+ * ------------------------------------------------------------ */
+.stat-mini {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: stretch;
+  min-height: 56px;
+  padding: var(--space-2) 0;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 单项：数字在上、文案在下，居中排列 */
+.stat-mini__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xxs);
+  min-width: 0;
+}
+
+/* 项间分隔线（首项无），高度取 --space-6（24px） */
+.stat-mini__item + .stat-mini__item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: var(--space-6);
+  transform: translateY(-50%);
+  background-color: var(--color-divider);
+}
+
+/* 数字：17px 半粗（金额字阶复用，统计数字同规格） */
+.stat-mini__value {
+  font-size: var(--fs-money);
+  font-weight: var(--fw-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+/* 文案：12px 三级色 */
+.stat-mini__label {
+  font-size: var(--fs-aux);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-tertiary);
+}
+
+
+/* ============================================================
+ * 统计页 · 对账单式科目列表 + 科目明细弹层（纯增量，不改既有 class）
+ * 结构：.bill-subject > .bill-subject__row（__label/__note/__amount/__chevron）
+ * 弹层：__hero/__formula/__entries(__entry*)/__total/__derived-tip
+ * 溢出约束：单列 100% 宽；金额列等宽数字、可缩字号（≥13px）可换行，禁撑破
+ * ============================================================ */
+
+/* 科目列表容器：单列 100% 宽，与月份选择器/导出按钮留白 */
+.bill-subject {
+  width: 100%;
+  margin: var(--space-md) 0;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* 科目行：左标签 + 右金额 + 右 chevron，整行可点 */
+.bill-subject__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-divider);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--transition-fast);
+}
+
+.bill-subject__row:active {
+  opacity: 0.6;
+}
+
+/* 左标签列：主标签 + 固定短注（对账利润=明面账 / 实际利润=含辅材隐性成本） */
+.bill-subject__label {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  font-size: var(--fs-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+/* 短注：小字辅助色 */
+.bill-subject__note {
+  font-size: var(--fs-aux);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-tertiary);
+}
+
+/* 右金额：等宽数字右对齐；允许换行，禁止撑破容器 */
+.bill-subject__amount {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* 窄屏（≤380px）金额列缩字号，下限 13px */
+@media (max-width: 380px) {
+  .bill-subject__amount {
+    font-size: 13px;
+  }
+}
+
+/* 右 chevron：指示可点，弱色不抢视觉 */
+.bill-subject__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+/* ---- 科目明细弹层 ---- */
+
+/* 顶部：label 小字 + 金额大字（等宽数字） */
+.bill-subject__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.bill-subject__hero-label {
+  font-size: var(--fs-aux);
+  color: var(--color-text-tertiary);
+}
+
+.bill-subject__hero-amount {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+/* 区块小标题（计算口径 / 逐单明细共用） */
+.bill-subject__block-title {
+  font-size: var(--fs-aux);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+/* 口径块：formula 全文，等宽数字右对齐，长公式允许换行 */
+.bill-subject__formula {
+  padding: var(--space-md);
+  background-color: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+}
+
+.bill-subject__formula-text {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* 明细块：逐单行 = 日期+客户名 左，金额 右（等宽） */
+.bill-subject__entries {
+  display: flex;
+  flex-direction: column;
+}
+
+.bill-subject__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.bill-subject__entry-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.bill-subject__entry-name {
+  font-size: var(--fs-body);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bill-subject__entry-date {
+  font-size: var(--fs-aux);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+.bill-subject__entry-amount {
+  flex-shrink: 0;
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+/* 负利润行标红（实际利润科目可能含负值行） */
+.bill-subject__entry-amount--negative {
+  color: var(--color-danger);
+}
+
+/* 合计行：Σentries，与科目 amount 对照（应相等） */
+.bill-subject__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+}
+
+.bill-subject__total-amount {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/* 合计对照说明：小字辅助色右对齐 */
+.bill-subject__total-compare {
+  font-size: var(--fs-aux);
+  color: var(--color-text-tertiary);
+  text-align: right;
+  margin-top: var(--space-xxs);
+}
+
+/* 派生科目提示（reconciliation/average：仅口径，无逐单明细） */
+.bill-subject__derived-tip {
+  font-size: var(--fs-aux);
+  color: var(--color-text-tertiary);
+}
+
+/* ------------------------------------------------------------
+ * BUG2 溢出修复：2 列统计网格轨道允许收缩到 0（minmax(0,1fr)），
+ * 长金额/长数字不再撑破 100% 宽；仅作新修饰类叠加，不改既有 .stat-grid
+ * ------------------------------------------------------------ */
+.stat-grid--safe {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stat-grid--safe .stat-card {
+  min-width: 0;
+}
+
+.stat-grid--safe .stat-card__value {
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------
+ * 智能识别预览弹窗（ParsePreviewDialog，任务K 新增，仅尾部追加）：
+ * 数量对不上红色告警条；存疑单黄底 + 存疑字段黄标；确认后才入库
+ * ------------------------------------------------------------ */
+.parse-preview__alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.parse-preview__alert svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.parse-preview__dup {
+  font-size: var(--fs-aux);
+  color: var(--color-text-tertiary);
+}
+
+.parse-preview__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.parse-preview__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-surface);
+}
+
+/* 存疑单：整卡淡黄底提示（不阻塞入库） */
+.parse-preview__item--warn {
+  background-color: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.parse-preview__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.parse-preview__seq {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-aux);
+}
+
+.parse-preview__name {
+  font-size: var(--fs-card-title);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.parse-preview__phone {
+  font-size: var(--fs-body);
+  color: var(--color-text-secondary);
+}
+
+.parse-preview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  font-size: var(--fs-aux);
+  color: var(--color-text-secondary);
+}
+
+.parse-preview__addr {
+  font-size: var(--fs-aux);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 存疑字段标签：黄底深黄字小标签 */
+.parse-preview__issues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xxs);
+}
+
+.parse-preview__issue {
+  padding: 1px var(--space-sm);
+  border-radius: var(--radius-full);
+  background-color: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
+  font-size: var(--fs-aux);
+  line-height: 1.6;
+}
+
+.parse-preview__tip {
+  font-size: var(--fs-aux);
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+/* 勘测表单分区卡内双列网格（任务R：标签在上控件在下，手机端两列等宽） */
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+/* ------------------------------------------------------------
+ * 一键补桩弹窗（RestockDialog，任务U 模块D，仅尾部追加）：
+ * 发货单预览块（保留换行、长行折行）+ 辅材数量输入窄列
+ * ------------------------------------------------------------ */
+.shipment-preview {
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-primary);
+  font-size: var(--fs-body);
+  font-family: inherit;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.shipment-preview__qty {
+  width: calc(var(--space-xl) * 3);
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+ * 补桩状态标签点击态（任务U 模块A⑤，仅尾部追加）：
+ * 「需补桩」⇄「已补桩」可点互转，挂手型与点按反馈
+ * ------------------------------------------------------------ */
+.tag--clickable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tag--clickable:active {
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------
+ * 外发文本预览编辑器（TextPreviewDialog，任务v35，仅尾部追加）：
+ * 弹窗内可编辑文本区，自适应内容高度、可纵向拖高
+ * ------------------------------------------------------------ */
+.text-preview-editor {
+  min-height: calc(var(--space-xl) * 8);
+  resize: vertical;
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.6;
+}

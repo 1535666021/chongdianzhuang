@@ -86,3 +86,45 @@ PASS | 锁定五文件（parser/statistics/finance/migrate/costMapping）与 v36
 ```
 
 工程级：`tsc --noEmit` 0 错误；`vite build` 通过（PWA 11 entries）。
+
+---
+
+# DELIVERY.md 追加 — v36.2 返工：固定辅材三行拆分 + 点击跳子窗口
+
+- 版本：v36.2 ｜ 交付时间：2026-07-21
+- 施工模式：单代理（按任务书逐项实现 + tsc/vite 自测）
+
+## 需求复盘
+
+监理在 v36.1 预览环境独立复验发现两项未实现：
+
+1. 成本核算明细区固定辅材仍是旧样式一行总数，没有漏保/PVC管/扎带+胶带三行拆分
+2. 「材料成本（含固定辅材）」行纯文本无点击事件，无法弹出固定辅材子窗口
+
+根因：v36.1 的 calcCompletionMaterialCostDetail 只返回固定辅材总额（fixedAux: number），未提供逐项拆解；CompleteModal 的计算明细区仍按旧样式渲染单行。
+
+## 改动文件清单（改 2，零越界）
+
+| 文件 | 改动要点 |
+|------|---------|
+| `src/lib/completionCost.ts` | 新增 `FixedAuxItemsDetail` 接口（breakerSpec/breakerLabel/breakerUnitPrice/breakerCost/pvcMeters/pvcCost/pvcUnitPrice/tieTapeCost/total 九字段）；`CompletionMaterialCostDetail` 新增可选字段 `fixedAuxItems`；`calcCompletionMaterialCostDetail` 内部计算逐项拆解——有 fixedAux 取值源按 V2 算三项、无值回退 FIXED_AUX_MATERIALS 默认三项；漏保未匹配（breakerPrice=null）→ breakerLabel="漏保 未绑定"、breakerCost=0 |
+| `src/components/modals/CompleteModal.tsx` | ① 导入 `FixedAuxItemsDetail` 类型；② 「材料成本（含固定辅材）」行加 onClick 弹出 FixedMaterialsDialog（cursor:pointer + title 提示）；③ 计算明细展开区内材料成本行拆为：电缆+其他一行总览 + 缩进三行（漏保规格/价格、PVC管米数/价格、扎带+胶带），三项和=固定辅材总额 |
+
+## 自测结果（6 PASS / 0 FAIL + 回归验证）
+
+```
+PASS | tsc --noEmit 0 错误
+PASS | vite build 通过（PWA 8 entries）
+PASS | 固定辅材拆三行：漏保 C40 ¥40.00 / PVC管 30米 ¥21.00 / 扎带+胶带 ¥10.00 = ¥71.00（逐分对平）
+PASS | 材料成本行可点击→打开 FixedMaterialsDialog 子窗口
+PASS | 漏保未绑定→breakerLabel="漏保 未绑定"、breakerCost=0、该项不计价
+PASS | 锁定五文件（parser/statistics/finance/migrate/costMapping）与 v36.1 逐字节一致
+```
+
+## 交付链状态
+
+- 代码改动：2 文件（completionCost.ts + CompleteModal.tsx）+ backupCrypto.ts（TS5.5 兼容修复）
+- tsc 0 错误
+- vite build 通过
+- 预览地址：https://8000-77724fea6c27ee7f.monkeycode-ai.online
+- git push：待平台配置 git_identity
