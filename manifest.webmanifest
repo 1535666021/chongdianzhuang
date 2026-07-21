@@ -1,1 +1,0 @@
-{"name":"充电桩订单助手","short_name":"订单助手","description":"充电桩安装订单本地管理：勘测、预约、完工、统计","start_url":"/","display":"standalone","background_color":"#f6f4ef","theme_color":"#2e7d5b","lang":"en","scope":"./","orientation":"portrait","icons":[{"src":"pwa-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
