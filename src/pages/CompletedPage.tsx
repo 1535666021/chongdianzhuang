@@ -37,6 +37,7 @@ export function CompletedPage() {
   const { orders, deleteOrder, updateOrder, showToast } = useApp();
 
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+  const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter | "">("");
   /* 常驻搜索关键词（姓名 / 电话 / 地址，复用首页 filterOrders 逻辑） */
   const [keyword, setKeyword] = useState("");
@@ -96,6 +97,32 @@ export function CompletedPage() {
     showToast(`已标记回款 ${formatMoney(amount)}`);
   };
 
+  /* ---- 全部回款（批量标记所有未回款订单）---- */
+  const handleMarkAllPaid = () => {
+    const unpaid = completed.filter((o) => !isPaid(o));
+    let totalAmount = 0;
+    for (const order of unpaid) {
+      const legacy = order.completion?.legacyProfit as Record<string, unknown> | undefined;
+      const amount =
+        order.payment?.amount ??
+        order.completion?.profitData?.customerPaid ??
+        (typeof legacy?.customerPaid === "number" ? legacy.customerPaid : undefined) ??
+        order.completion?.addonFee ??
+        0;
+      totalAmount += amount;
+      updateOrder(order.id, {
+        ...order,
+        payment: {
+          ...order.payment,
+          paid: true,
+          amount,
+        },
+      });
+    }
+    showToast(`已批量标记 ${unpaid.length} 单回款，合计 ${formatMoney(totalAmount)}`);
+    setShowMarkAllConfirm(false);
+  };
+
   /* ---- 取消回款 ---- */
   const handleCancelPaid = (order: Order) => {
     updateOrder(order.id, {
@@ -124,6 +151,15 @@ export function CompletedPage() {
               ? `（${unpaidStats.noAmountCount} 单未填金额按 0 计）`
               : ""}
           </span>
+          {completed.filter((o) => !isPaid(o)).length > 0 && (
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={() => setShowMarkAllConfirm(true)}
+            >
+              全部回款
+            </button>
+          )}
         </div>
       </div>
 
@@ -224,6 +260,15 @@ export function CompletedPage() {
           ))
         )}
       </div>
+
+      {/* 批量回款确认 */}
+      <ConfirmDialog
+        open={showMarkAllConfirm}
+        title="全部回款确认"
+        content={`确定将 ${completed.filter((o) => !isPaid(o)).length} 单未回款订单全部标记为已回款吗？`}
+        onConfirm={handleMarkAllPaid}
+        onCancel={() => setShowMarkAllConfirm(false)}
+      />
 
       {/* 弹窗调度 */}
       <ConfirmDialog
