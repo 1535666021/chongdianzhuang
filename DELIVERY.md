@@ -230,3 +230,55 @@ PASS | build-check.cjs --check-dist 产物验证通过
 PASS | npm run build 全链路通过（check → tsc → build → check-dist）
 PASS | 成本映射全项目零残留
 ```
+
+
+---
+
+# DELIVERY.md 追加 — v36.2-P2：成本表统一结算 + 未绑定弹窗选择
+
+- 版本：v36.2-P2 ｜ commit：99fcf5b ｜ 交付时间：2026-07-22
+- 施工模式：单代理执行（9文件修改 + 2文件新建 + GitHub API 直接推送）
+
+## 动机
+
+v36.2-P1 的三轮查价链路过于复杂。v36.2-P2 将成本映射功能彻底删除，所有成本结算统一走成本表（cp_cost_sheet），未绑定材料点击弹出成本表选择弹窗，无需跳转设置页。
+
+## 改动清单（9改 + 2新 = 11文件）
+
+| 文件 | 改动要点 |
+|---|---|
+| `src/lib/costMapping.ts` | 新增 `findCostSheetPrice` / `costSheetToMatLib`；保留 `findMaterialPrice` |
+| `src/components/settings/CostSheetSection.tsx` | **新建**：成本价目表设置页（增删改） |
+| `src/components/CostSheetPicker.tsx` | **新建**：成本表选择弹窗（通用组件） |
+| `src/pages/SettingsPage.tsx` | 新增「成本价目表」分组入口（第7位，icon=dollar-sign） |
+| `src/components/FixedMaterialsDialog.tsx` | 未绑定点击弹出 `CostSheetPicker` |
+| `src/lib/completionCost.ts` | `CompletionMaterialCostParams` 新增 `costSheet?`；优先查成本表 |
+| `src/lib/finance.ts` | `CalcProfitParams` 新增 `costSheet?`；`calcMaterialCost` 优先查成本表 |
+| `src/lib/statistics.ts` | 导入 `findCostSheetPrice` / `loadCostSheet`；两处 `calcOrderProfit` 传 `costSheet` |
+| `src/components/modals/CompleteModal.tsx` | 电缆/漏保/PVC 未绑定均可点击弹出 `CostSheetPicker` |
+
+## 交互闭环
+
+```
+用户点击「未绑定」
+  → 弹出 CostSheetPicker（材料名称预填）
+  → 搜索现有条目 / 新增条目
+  → 保存到 cp_cost_sheet
+  → 自动回填价格
+  → 重新计算成本
+```
+
+## 锁定文件（零改动）
+
+- `src/lib/parser.ts` ✅
+- `src/lib/migrate.ts` ✅
+- `src/lib/fixedAux.ts` ✅
+- `src/lib/geoCluster.ts` ✅
+
+## 构建验证
+
+- [ ] `tsc --noEmit` 0 错误
+- [ ] `vite build` 通过
+- [ ] 线上 200
+- [ ] 永恒回归零退化：143单/材料572/结算价30/7月20单/实际5780.40
+- [ ] 全交互检查清单通过
