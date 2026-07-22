@@ -280,10 +280,10 @@ const NAME_EXCLUDE_RE =
 
 /** 键值块字段 ← 候选键（按优先级排序，取第一个非空值） */
 const KV_FIELD_KEYS = {
-  orderNo: ["订单号", "安装订单号", "安装工单号", "服务编号"],
-  customerName: ["订单姓名", "客户姓名", "联系人"],
-  phone: ["真实号码", "客户手机", "用户电话", "联系电话", "联系人电话"],
-  address: ["安装地址", "用户地址", "收件地址"],
+  orderNo: ["订单号", "安装订单号", "安装工单号", "服务编号", "服务单号", "外联单号"],
+  customerName: ["订单姓名", "客户姓名", "联系人", "车主姓名"],
+  phone: ["真实号码", "客户手机", "用户电话", "联系电话", "联系人电话", "车主电话"],
+  address: ["安装地址", "用户地址", "收件地址", "详细地址"],
   brandName: ["服务品牌"],
   powerKw: ["功率"],
   packageMeters: ["套包米数"],
@@ -480,8 +480,8 @@ const ORDER_INDEX_LINE_RE = /^第\s*\d+\s*[单条笔]\s*$/;
 
 /** 订单起始键：块内同一键重复出现即视为新订单开始（连贴公告防吞单） */
 const ORDER_START_KEYS = new Set([
-  "订单号", "安装订单号", "安装工单号", "服务编号",
-  "用户信息", "订单姓名", "客户姓名",
+  "订单号", "安装订单号", "安装工单号", "服务编号", "服务单号", "外联单号",
+  "用户信息", "订单姓名", "客户姓名", "联系人", "车主姓名",
 ]);
 /** 电话类起始键：值中出现第二个不同手机号时视为新订单开始
  * （"联系人电话/联系电话"不算——那是同一单的第二联系人） */
@@ -492,7 +492,7 @@ const PHONE_START_KEYS = new Set([
 /** 订单号类起始键：软边界预判专用（"用户信息/客户姓名"是公告续键，
  * 不能作为新订单起始，否则公告内部空行会把一单切碎） */
 const ORDER_NO_KEYS = new Set([
-  "订单号", "安装订单号", "安装工单号", "服务编号",
+  "订单号", "安装订单号", "安装工单号", "服务编号", "服务单号", "外联单号",
 ]);
 
 /** 行像"新订单起始"（软边界预判用）：
@@ -709,7 +709,7 @@ function parseKeyValueBlock(block: string): ParsedOrderItem {
   item.customerName = pickKv(kv, KV_FIELD_KEYS.customerName) || userInfoName;
   item.phone = pickKv(kv, KV_FIELD_KEYS.phone) || userInfoPhone;
   item.address = cleanAddressText(pickKv(kv, KV_FIELD_KEYS.address));
-  item.brandName = pickKv(kv, KV_FIELD_KEYS.brandName);
+  item.brandName = pickKv(kv, KV_FIELD_KEYS.brandName) || extractBrandName(freeLines.join("\n"));
   item.powerKw = pickKv(kv, KV_FIELD_KEYS.powerKw);
   item.packageMeters = pickKv(kv, KV_FIELD_KEYS.packageMeters);
   item.vin = pickKv(kv, KV_FIELD_KEYS.vin);
