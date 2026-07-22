@@ -50,6 +50,7 @@ export function FixedMaterialsDialog({
   const [leakBoxPrice, setLeakBoxPrice] = useState("");
   const [leakBoxBound, setLeakBoxBound] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerItems, setPickerItems] = useState<CostSheetItemType[]>([]);
 
   useEffect(() => {
     setCostSheet(loadCostSheet());
@@ -178,7 +179,13 @@ export function FixedMaterialsDialog({
         ) : (
           <span
             className="text-danger text-sm cursor-pointer"
-            onClick={() => setShowPicker(true)}
+            onClick={() => {
+              const items = loadCostSheet().filter(
+                (it) => it.materialName === `漏保 ${spec}`,
+              );
+              setPickerItems(items);
+              setShowPicker(true);
+            }}
           >
             未绑定，点击选择成本条目
           </span>
@@ -207,11 +214,32 @@ export function FixedMaterialsDialog({
       </div>
 
       {showPicker && (
-        <CostSheetPicker
-          materialName={`漏保 ${spec}`}
-          onSelect={handleSelectFromPicker}
-          onClose={() => setShowPicker(false)}
-        />
+        <div className="form-field">
+          <label className="form-field__label">选择成本条目</label>
+          {pickerItems.length === 0 ? (
+            <div className="text-tertiary">暂无匹配条目</div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {pickerItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="btn btn--outline text-left"
+                  onClick={() => handleSelectFromPicker(item)}
+                >
+                  {item.name} — {item.costPrice}元/{item.unit}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn btn--sm mt-2"
+            onClick={() => setShowPicker(false)}
+          >
+            收起
+          </button>
+        </div>
       )}
     </Modal>
   );
