@@ -2,7 +2,7 @@
  * 设置页（微信式分组列表 + 二级页）
  * 一级页：分组条目（图标 + 名称 + 右箭头），顺序——人员默认 / 工程师信息 /
  *      地图服务 / 数据管理 / 自定义品牌 / 费率配置（含品牌结算价）/
- *      成本映射 / 平台扣点 / 话术模板 / 表单预设 / 危险操作
+ *      成本价目表 / 平台扣点 / 话术模板 / 表单预设 / 危险操作
  * 二级页：页内状态切换（无路由），顶部 arrow-left 返回 + 分组名；
  *      各区块组件挂载时自 storage 读草稿，输入即存（防抖 500ms 自动保存）
  * 规范：所有读写走 storage / parser 封装，本页不碰 localStorage
@@ -24,6 +24,7 @@ import { StockSection } from "@/components/settings/StockSection";
 import { WatermarkSection } from "@/components/settings/WatermarkSection";
 import { LeapmotorAddonsSection } from "@/components/settings/LeapmotorAddonsSection";
 import { DangerSection } from "@/components/settings/DangerSection";
+import { CostSheetSection } from "@/components/settings/CostSheetSection";
 
 /* ------------------------------------------------------------
  * 分组注册表：一级页条目顺序即二级页内容映射（顺序固定，见头注释）
@@ -35,6 +36,7 @@ type SettingsGroupKey =
   | "data"
   | "brand"
   | "rate"
+  | "costSheet"
   | "platform"
   | "script"
   | "formPreset"
@@ -58,6 +60,7 @@ const SETTINGS_GROUPS: SettingsGroupMeta[] = [
   { key: "data", title: "数据管理", icon: "box" },
   { key: "brand", title: "自定义品牌", icon: "edit" },
   { key: "rate", title: "费率配置", icon: "wallet" },
+  { key: "costSheet", title: "成本价目表", icon: "dollar-sign" },
   { key: "platform", title: "平台扣点", icon: "settings" },
   { key: "script", title: "话术模板", icon: "copy" },
   { key: "formPreset", title: "表单预设", icon: "file-text" },
@@ -82,6 +85,8 @@ function SettingsGroupContent({ groupKey }: { groupKey: SettingsGroupKey }) {
       return <BrandSection />;
     case "rate":
       return <RatesSection />;
+    case "costSheet":
+      return <CostSheetSection />;
     case "platform":
       return <PlatformSection />;
     case "script":
