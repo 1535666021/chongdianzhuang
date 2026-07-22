@@ -2,7 +2,7 @@
  * 单单利润真实计算层：单个订单的 增项费 / 平台扣点 / 材料成本 / 利润 逐步核算
  * 规范：财务计算唯一入口是 statistics.ts（月度）与本模块（单单），
  *      页面/组件禁止手写任何财务公式，一律调用本模块纯函数
- * 依赖铁则：本模块禁止 import storage（费率/映射由调用方从 storage 读取后传入）
+ * 依赖铁则：本模块禁止 import storage（费率/映射/成本表由调用方从 storage 读取后传入）
  * ============================================================ */
 
 import type {
@@ -12,8 +12,14 @@ import type {
   Order,
   PlatformRateConfig,
   PlatformConfig,
+  CostSheetItem,
 } from "@/types";
-import { FIXED_AUX_MATERIALS, findMaterialPrice, type MatLibEntry } from "@/lib/costMapping";
+import {
+  FIXED_AUX_MATERIALS,
+  findMaterialPrice,
+  findCostSheetPrice,
+  type MatLibEntry,
+} from "@/lib/costMapping";
 import { getPlatformRate } from "@/lib/platforms";
 import { formatMoney } from "@/lib/utils";
 
@@ -72,14 +78,27 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * v36.2-P2 扩展：成本结算统一走成本表
+ * @param costSheet 成本表（有值时优先查成本表，无值 fallback 材料库）
+ */
 export function calcMaterialCost(
   materials: MaterialItem[],
   lib: MatLibEntry[],
+  costSheet?: CostSheetItem[],
 ): { total: number; unmapped: string[] } {
   let total = 0;
   const unmapped: string[] = [];
   for (const item of materials) {
-    const price = findMaterialPrice(item.name, lib);
+    /* 优先查成本表 */
+    let price: number | null = null;
+    if (costSheet && costSheet.length > 0) {
+      price = findCostSheetPrice(item.name, costSheet);
+    }
+    /* fallback 材料库 */
+    if (price === null) {
+      price = findMaterialPrice(item.name, lib);
+    }
     if (price === null) {
       if (!unmapped.includes(item.name)) unmapped.push(item.name);
       continue; // 未命中：成本计 0
@@ -115,6 +134,8 @@ export interface CalcProfitParams {
   platforms?: PlatformConfig[];
   /** 材料库 */
   lib: MatLibEntry[];
+  /** 成本表（v36.2-P2 新增：成本结算统一走成本表） */
+  costSheet?: CostSheetItem[];
   /** 重新核算：单单扣点率覆盖（小数），不传按平台类型 */
   platformRateOverride?: number;
 }
@@ -153,6 +174,7 @@ function formatRate(rate: number): string {
  * - 客户增项费：套包材料（电缆/PVC管）仅超米部分收费，其他材料按 unitPrice×quantity 全额收费
  * - 平台扣点：只对客户增项费计（维修/安装/勘测费不扣点；维修单增项材料费同样扣点且计成本）
  * - 材料成本：全部增项材料（含套包免费部分）+ 固定辅材一份，未命中映射计 0
+ * v36.2-P2：成本结算优先走成本表
  */
 export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
   const {
@@ -162,6 +184,7 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
     platformRates,
     platforms,
     lib,
+    costSheet,
     platformRateOverride,
   } = params;
 
@@ -219,10 +242,12 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
         : platformRates.other);
   const platformDeduction = round2(customerAddonFee * platformRate);
 
-  /* 4. 材料成本：全部增项材料（含套包免费部分）+ 固定辅材一份 */
+  /* 4. 材料成本：全部增项材料（含套包免费部分）+ 固定辅材一份
+   * v36.2-P2：优先走成本表 */
   const { total: addonMaterialCost, unmapped } = calcMaterialCost(
     materials,
     lib,
+    costSheet,
   );
   const fixedAuxCost = round2(calcFixedAuxCost());
   const materialCost = round2(addonMaterialCost + fixedAuxCost);
@@ -234,10 +259,16 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
 
   /* 6. 计算步骤（金额统一 formatMoney 千分位，页面逐步展示公式与明细） */
   const costLines = materials.map((item) => {
-    const price = findMaterialPrice(item.name, lib);
+    let price: number | null = null;
+    if (costSheet && costSheet.length > 0) {
+      price = findCostSheetPrice(item.name, costSheet);
+    }
+    if (price === null) {
+      price = findMaterialPrice(item.name, lib);
+    }
     return price !== null
       ? `${item.name} = ${formatMoney(price)} × ${item.quantity} = ${formatMoney(price * item.quantity)}`
-      : `${item.name} 未命中材料库，成本计 ${formatMoney(0)}`;
+      : `${item.name} 未命中成本表/材料库，成本计 ${formatMoney(0)}`;
   });
   const fixedAuxText = FIXED_AUX_MATERIALS.map(
     (aux) => `${aux.name}×${aux.quantity}`,
