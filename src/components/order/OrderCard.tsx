@@ -437,7 +437,7 @@ export function OrderCard({
         {order.address ? (
           <div className="flex-between gap-sm">
             <span
-              className="text-sm text-ellipsis copyable flex-1"
+              className="text-sm copyable flex-1" style={{ whiteSpace: "normal", wordBreak: "break-all" }}
               title="点击复制地址"
               onClick={() => copyText(order.address, "地址")}
             >
