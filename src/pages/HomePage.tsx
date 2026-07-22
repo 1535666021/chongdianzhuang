@@ -288,7 +288,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       setPreviewRows(rows);
       setImportBusy(false);
       setParseOpen(false);
-    }, 0);
+    }, 50);  /* 50ms 确保 loading 态先渲染 */
   };
 
   /* 预览确认入库：逐条 addOrder（draft 已在 lib 组装完毕），

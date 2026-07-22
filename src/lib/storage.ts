@@ -213,7 +213,21 @@ export function importBackup(json: string): string | null {
     return "备份文件中的订单数据格式不正确，导入中止";
   }
 
+  // 🛡️ 二次清洗：存储后重新读取，过滤结构不完整的订单
   saveOrders(v1.orders);
+  const cleanedOrders = loadOrders().filter((o) =>
+    typeof o === "object" &&
+    o !== null &&
+    typeof o.id === "string" &&
+    typeof o.customerName === "string" &&
+    typeof o.address === "string" &&
+    typeof o.customerPhone === "string" &&
+    typeof o.status === "string"
+  );
+  if (cleanedOrders.length < v1.orders.length) {
+    saveOrders(cleanedOrders);
+  }
+
   saveSettings({ ...DEFAULT_APP_SETTINGS, ...(v1.settings ?? {}) });
   saveCustomBrands(Array.isArray(v1.customBrands) ? v1.customBrands : []);
   write(STORAGE_KEYS.dataVersion, DATA_VERSION);

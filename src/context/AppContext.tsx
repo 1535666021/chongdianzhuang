@@ -129,11 +129,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const all = loadOrders();
     if (all.length > 300) {
       setOrders(all.slice(0, 30));
+      let idleId: number | ReturnType<typeof setTimeout>;
       if ("requestIdleCallback" in window) {
-        requestIdleCallback(() => setOrders(all));
+        idleId = requestIdleCallback(() => setOrders(all));
       } else {
-        setTimeout(() => setOrders(all), 200);
+        idleId = setTimeout(() => setOrders(all), 200);
       }
+      return () => {
+        if (typeof idleId === "number" && "cancelIdleCallback" in window) {
+          cancelIdleCallback(idleId);
+        } else {
+          clearTimeout(idleId as ReturnType<typeof setTimeout>);
+        }
+      };
     } else {
       setOrders(all);
     }
