@@ -1896,3 +1896,10 @@ img {
   font-family: inherit;
   line-height: 1.6;
 }
+
+
+/* 加载更多按钮容器 */
+.load-more {
+  padding: var(--space-md) 0;
+  text-align: center;
+}

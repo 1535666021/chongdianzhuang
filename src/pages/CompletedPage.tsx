@@ -41,6 +41,8 @@ export function CompletedPage() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter | "">("");
   /* 常驻搜索关键词（姓名 / 电话 / 地址，复用首页 filterOrders 逻辑） */
   const [keyword, setKeyword] = useState("");
+  /* 列表截断：默认显示 50 条，点击加载更多每次 +50 */
+  const [visibleCount, setVisibleCount] = useState(50);
 
   /* 已完成订单：按完工日期倒序（无完工日期的排最后） */
   const completed = useMemo(
@@ -173,14 +175,14 @@ export function CompletedPage() {
             value={keyword}
             placeholder="搜索 姓名 / 电话 / 地址"
             aria-label="搜索已完成订单"
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => { setKeyword(e.target.value); setVisibleCount(50); }}
           />
           {keyword ? (
             <button
               type="button"
               className="modal__close"
               aria-label="清空搜索"
-              onClick={() => setKeyword("")}
+              onClick={() => { setKeyword(""); setVisibleCount(50); }}
             >
               ×
             </button>
@@ -191,7 +193,7 @@ export function CompletedPage() {
         <FilterChips<PaymentFilter>
           options={PAYMENT_FILTER_OPTIONS}
           value={paymentFilter}
-          onChange={(next) => setPaymentFilter(next as PaymentFilter | "")}
+          onChange={(next) => { setPaymentFilter(next as PaymentFilter | ""); setVisibleCount(50); }}
         />
 
         {filtered.length === 0 ? (
@@ -214,50 +216,63 @@ export function CompletedPage() {
             </div>
           )
         ) : (
-          filtered.map((order) => (
-            <div key={order.id}>
-              <OrderCard
-                order={order}
-                page="completed"
-                onDelete={setDeleteTarget}
-              />
-              {/* 回款操作行：标记回款（一键）/ 取消回款 */}
-              <div className="appt-order-actions">
-                <span
-                  className={
-                    isPaid(order)
-                      ? "text-sm text-secondary"
-                      : "text-sm text-danger"
-                  }
-                >
-                  {isPaid(order)
-                    ? `已回款${
-                        order.payment?.amount != null
-                          ? ` ${formatMoney(order.payment.amount)}`
-                          : ""
-                      }`
-                    : "未回款"}
-                </span>
-                {isPaid(order) ? (
-                  <button
-                    type="button"
-                    className="btn btn--outline btn--sm"
-                    onClick={() => handleCancelPaid(order)}
+          <>
+            {filtered.slice(0, visibleCount).map((order) => (
+              <div key={order.id}>
+                <OrderCard
+                  order={order}
+                  page="completed"
+                  onDelete={setDeleteTarget}
+                />
+                {/* 回款操作行：标记回款（一键）/ 取消回款 */}
+                <div className="appt-order-actions">
+                  <span
+                    className={
+                      isPaid(order)
+                        ? "text-sm text-secondary"
+                        : "text-sm text-danger"
+                    }
                   >
-                    取消回款
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn--primary btn--sm"
-                    onClick={() => handleMarkPaid(order)}
-                  >
-                    标记回款
-                  </button>
-                )}
+                    {isPaid(order)
+                      ? `已回款${
+                          order.payment?.amount != null
+                            ? ` ${formatMoney(order.payment.amount)}`
+                            : ""
+                        }`
+                      : "未回款"}
+                  </span>
+                  {isPaid(order) ? (
+                    <button
+                      type="button"
+                      className="btn btn--outline btn--sm"
+                      onClick={() => handleCancelPaid(order)}
+                    >
+                      取消回款
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--sm"
+                      onClick={() => handleMarkPaid(order)}
+                    >
+                      标记回款
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+            {filtered.length > visibleCount && (
+              <div className="load-more">
+                <button
+                  type="button"
+                  className="btn btn--outline btn--block"
+                  onClick={() => setVisibleCount((prev) => prev + 50)}
+                >
+                  加载更多（当前 {visibleCount}/{filtered.length}）
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
