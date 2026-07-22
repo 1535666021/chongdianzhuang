@@ -183,15 +183,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   /* 片区分组：未预约待办池按片区聚组（口径A与列表/计数同源；
      费率/平台扣点/材料库实时读 storage） */
-  const areaClusters = useMemo(
-    () =>
-      clusterOrdersByArea(homePool, {
-        rateConfigs: loadRateConfigs(),
-        platformRates: loadPlatformRates(),
-        lib: loadMaterialsLib(),
-      }),
-    [homePool],
-  );
+  const areaClusters = useMemo(() => {
+    // 🛡️ 数据量大于 200 时暂停聚类，防止滚动卡顿
+    if (homePool.length > 200) return [];
+    return clusterOrdersByArea(homePool, {
+      rateConfigs: loadRateConfigs(),
+      platformRates: loadPlatformRates(),
+      lib: loadMaterialsLib(),
+    });
+  }, [homePool]);
 
   /* 选中的片区聚组（订单变化致聚组消失/重编号时自动回落为未选中，无需 effect 清理） */
   const selectedCluster = useMemo(

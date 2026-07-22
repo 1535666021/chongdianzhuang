@@ -59,7 +59,12 @@ function write<T>(key: StorageKey, value: T): boolean {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
     return true;
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && (e as DOMException).name === "QuotaExceededError") {
+      alert("⚠️ 存储空间已满！请前往「设置」→ 导出备份，然后清理旧订单或恢复出厂。");
+    } else {
+      console.warn("存储失败", e);
+    }
     return false;
   }
 }
