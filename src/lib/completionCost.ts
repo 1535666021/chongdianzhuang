@@ -62,7 +62,9 @@ export interface FixedAuxItemsDetail {
   pvcUnitPrice: number;
   /** PVC管成本（元）= pvcMeters × pvcUnitPrice */
   pvcCost: number;
-  /** 漏保盒成本（元；成本表查询，无命中计 0） */
+  /** 漏保盒单价（元；null=成本表未匹配） */
+  leakBoxUnitPrice?: number | null;
+  /** 漏保盒成本（元；leakBoxUnitPrice 或成本表查询，无命中计 0） */
   leakBoxCost: number;
   /** 三项合计（元）= breakerCost + pvcCost + leakBoxCost */
   total: number;
@@ -124,6 +126,7 @@ export function calcCompletionMaterialCostDetail(
   let fixedAuxItems: FixedAuxItemsDetail | undefined;
   if (fixedAux) {
     const breakerCost = fixedAux.breakerPrice != null ? fixedAux.breakerPrice : 0;
+    const leakBoxUnitPrice = fixedAux.leakBoxPrice ?? findCostSheetPrice("漏保盒", costSheet);
     fixedAuxItems = {
       breakerSpec: fixedAux.breakerSpec,
       breakerLabel:
@@ -135,7 +138,8 @@ export function calcCompletionMaterialCostDetail(
       pvcMeters: fixedAux.pvcMeters,
       pvcUnitPrice: round2(pvcUnitPriceRaw),
       pvcCost: round2(fixedAux.pvcMeters * pvcUnitPriceRaw),
-      leakBoxCost: round2(leakBoxPriceRaw),
+      leakBoxUnitPrice,
+      leakBoxCost: round2(leakBoxUnitPrice ?? 0),
       total: round2(auxCost),
     };
   } else {
@@ -150,7 +154,8 @@ export function calcCompletionMaterialCostDetail(
       pvcMeters: cableTotalMeters,
       pvcUnitPrice: round2(pvcDefault),
       pvcCost: round2(pvcDefault * cableTotalMeters),
-      leakBoxCost: round2(leakBoxPriceRaw),
+      leakBoxUnitPrice: leakBoxPriceRaw,
+      leakBoxCost: round2(leakBoxPriceRaw ?? 0),
       total: round2(auxCost),
     };
   }

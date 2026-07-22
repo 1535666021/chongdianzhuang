@@ -66,10 +66,12 @@ export function defaultFixedAux(
 ): FixedAuxSelection {
   const breakerSpec = defaultBreakerSpec(order.powerKw, brandName);
   const breakerPrice = findBreakerPriceFromCostSheet(breakerSpec, costSheet);
+  const leakBoxPrice = findCostSheetPrice("漏保盒", costSheet);
   return {
     breakerSpec,
     breakerPrice,
     pvcMeters: cableMeters,
+    leakBoxPrice,
   };
 }
 
@@ -86,10 +88,10 @@ export function calcFixedAuxCostV2(
   costSheet: CostSheetItem[],
 ): number {
   const pvcUnitPrice = findCostSheetPrice("PVC管", costSheet) ?? 0;
-  const leakBoxPrice = findCostSheetPrice("漏保盒", costSheet) ?? 0;
+  const leakBoxUnitPrice = sel.leakBoxPrice ?? findCostSheetPrice("漏保盒", costSheet) ?? 0;
   return round2(
     (sel.breakerPrice ?? 0) * 1 +
       sel.pvcMeters * pvcUnitPrice +
-      leakBoxPrice,
+      leakBoxUnitPrice,
   );
 }

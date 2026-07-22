@@ -46,6 +46,8 @@ export function FixedMaterialsDialog({
   const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
   const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
   const [manuallyBound, setManuallyBound] = useState(false);
+  const [leakBoxPrice, setLeakBoxPrice] = useState("");
+  const [leakBoxBound, setLeakBoxBound] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
@@ -61,9 +63,14 @@ export function FixedMaterialsDialog({
     );
     setSpec(target.breakerSpec);
     setPvcMeters(target.pvcMeters);
+    setLeakBoxPrice(
+      target.leakBoxPrice != null ? String(target.leakBoxPrice) : "",
+    );
     /* v36.2-P3：判断绑定状态（成本表命中=已绑定） */
     const costPrice = findCostSheetPrice(`漏保 ${target.breakerSpec}`, costSheet);
     setManuallyBound(costPrice !== null);
+    const leakBoxCostPrice = findCostSheetPrice("漏保盒", costSheet);
+    setLeakBoxBound(leakBoxCostPrice !== null || target.leakBoxPrice != null);
   }, [init, order?.fixedAux, costSheet]);
 
   /* 切换规格时重置手动绑定状态 */
@@ -88,6 +95,8 @@ export function FixedMaterialsDialog({
       breakerPrice:
         breakerPrice.trim() === "" ? null : Number(breakerPrice),
       pvcMeters,
+      leakBoxPrice:
+        leakBoxPrice.trim() === "" ? null : Number(leakBoxPrice),
     };
     if (onSave) onSave(sel);
     else if (onConfirm) onConfirm(sel);

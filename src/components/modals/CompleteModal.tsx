@@ -748,6 +748,11 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     </div>
                     <div>
                       漏保盒 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.leakBoxCost)}
+                      {completionCalc.materialBreakdown.fixedAuxItems.leakBoxUnitPrice != null ? (
+                        <span className="text-success text-sm">已绑定</span>
+                      ) : (
+                        <span className="text-danger text-sm">未绑定</span>
+                      )}
                     </div>
                   </div>
                 ) : null}

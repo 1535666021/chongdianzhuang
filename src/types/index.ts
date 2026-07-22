@@ -192,6 +192,8 @@ export interface FixedAuxSelection {
   breakerPrice: number | null;
   /** PVC 管米数（默认=用线米数，桥架混用场景可手改） */
   pvcMeters: number;
+  /** 漏保盒单价（元；null=成本表未匹配，成本按 0 计） */
+  leakBoxPrice?: number | null;
 }
 
 export interface Order {
