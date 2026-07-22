@@ -698,7 +698,18 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                 <div>
                   材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
                   （电缆{completionCalc.materialBreakdown.cable > 0
-                    ? formatMoney(completionCalc.materialBreakdown.cable)
+                    ? (
+                      <span
+                        className="text-success cursor-pointer"
+                        style={{ textDecoration: "underline" }}
+                        onClick={() => {
+                          setPickerMaterialName("电缆");
+                          setShowCostPicker(true);
+                        }}
+                      >
+                        {formatMoney(completionCalc.materialBreakdown.cable)}
+                      </span>
+                    )
                     : (
                       <span
                         className="text-danger cursor-pointer"
@@ -717,7 +728,18 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     <div>
                       {completionCalc.materialBreakdown.fixedAuxItems.breakerLabel}
                       {completionCalc.materialBreakdown.fixedAuxItems.breakerUnitPrice != null
-                        ? ` ${formatMoney(completionCalc.materialBreakdown.fixedAuxItems.breakerCost)}`
+                        ? (
+                          <span
+                            className="text-success cursor-pointer"
+                            style={{ textDecoration: "underline" }}
+                            onClick={() => {
+                              setPickerMaterialName("漏保");
+                              setShowCostPicker(true);
+                            }}
+                          >
+                            {` ${formatMoney(completionCalc.materialBreakdown.fixedAuxItems.breakerCost)}`}
+                          </span>
+                        )
                         : (
                           <span
                             className="text-danger cursor-pointer"
@@ -733,7 +755,18 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     <div>
                       PVC管 {completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}米{" "}
                       {completionCalc.materialBreakdown.fixedAuxItems.pvcCost > 0
-                        ? formatMoney(completionCalc.materialBreakdown.fixedAuxItems.pvcCost)
+                        ? (
+                          <span
+                            className="text-success cursor-pointer"
+                            style={{ textDecoration: "underline" }}
+                            onClick={() => {
+                              setPickerMaterialName("PVC管");
+                              setShowCostPicker(true);
+                            }}
+                          >
+                            {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.pvcCost)}
+                          </span>
+                        )
                         : (
                           <span
                             className="text-danger cursor-pointer"
@@ -749,7 +782,16 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     <div>
                       漏保盒 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.leakBoxCost)}
                       {completionCalc.materialBreakdown.fixedAuxItems.leakBoxUnitPrice != null ? (
-                        <span className="text-success text-sm">已绑定</span>
+                        <span
+                          className="text-success text-sm"
+                          style={{ cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => {
+                            setPickerMaterialName("漏保");
+                            setShowCostPicker(true);
+                          }}
+                        >
+                          已绑定
+                        </span>
                       ) : (
                         <span
                           className="text-danger text-sm"
@@ -874,6 +916,28 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
         materialName={pickerMaterialName}
         onSelect={(item) => {
           setCostSheet(loadCostSheet());
+          if (!order) {
+            setShowCostPicker(false);
+            return;
+          }
+          const current = order.fixedAux ?? {
+            breakerSpec: "C40",
+            breakerPrice: null,
+            pvcMeters: 0,
+            leakBoxPrice: null,
+          };
+          if (pickerMaterialName === "漏保") {
+            updateOrder(order.id, {
+              ...order,
+              fixedAux: { ...current, breakerPrice: item.costPrice },
+            });
+          } else if (pickerMaterialName === "漏保盒") {
+            updateOrder(order.id, {
+              ...order,
+              fixedAux: { ...current, leakBoxPrice: item.costPrice },
+            });
+          }
+          // 电缆/PVC管 走成本表自动匹配，无需更新 fixedAux
           setShowCostPicker(false);
         }}
         onClose={() => setShowCostPicker(false)}
