@@ -12,9 +12,9 @@ import {
   BREAKER_SPECS,
   findBreakerPriceFromCostSheet,
 } from "@/lib/fixedAux";
+import { findCostSheetPrice } from "@/lib/costMapping";
 import { CostSheetPicker } from "@/components/CostSheetPicker";
 import type { CostSheetItem as CostSheetItemType } from "@/types";
-import { findCostSheetPrice } from "@/lib/costMapping";
 
 interface FixedMaterialsDialogProps {
   open?: boolean;
@@ -40,12 +40,12 @@ export function FixedMaterialsDialog({
   onClose,
 }: FixedMaterialsDialogProps) {
   if (!open) return null;
-
   const resolvedInit = init ?? order?.fixedAux ?? { breakerSpec: "C40", breakerPrice: null, pvcMeters: cableMeters };
   const [spec, setSpec] = useState(resolvedInit.breakerSpec);
   const [breakerPrice, setBreakerPrice] = useState("");
   const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
   const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
+  const [manuallyBound, setManuallyBound] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
@@ -61,14 +61,24 @@ export function FixedMaterialsDialog({
     );
     setSpec(target.breakerSpec);
     setPvcMeters(target.pvcMeters);
-  }, [init, order?.fixedAux]);
+    /* v36.2-P3：判断绑定状态（成本表命中=已绑定） */
+    const costPrice = findCostSheetPrice(`漏保 ${target.breakerSpec}`, costSheet);
+    setManuallyBound(costPrice !== null);
+  }, [init, order?.fixedAux, costSheet]);
 
-  /* 换规格：价格联动——查成本表（v36.2-P3） */
+  /* 切换规格时重置手动绑定状态 */
   useEffect(() => {
-    const matched = findBreakerPriceFromCostSheet(spec, costSheet);
-    if (matched !== null) {
-      setBreakerPrice(String(matched));
+    setManuallyBound(false);
+  }, [spec]);
+
+  /* 换规格：价格联动——查成本表（v36.2-P3 成本结算统一走成本表） */
+  useEffect(() => {
+    const costPrice = findCostSheetPrice(`漏保 ${spec}`, costSheet);
+    if (costPrice !== null) {
+      setBreakerPrice(String(costPrice));
+      setManuallyBound(true);
     }
+    /* 成本表未命中：不自动填充，保留当前值（init传入或用户手改） */
   }, [spec, costSheet]);
 
   const handleConfirm = () => {
@@ -85,23 +95,27 @@ export function FixedMaterialsDialog({
 
   const handleSelectFromPicker = (item: CostSheetItemType) => {
     setBreakerPrice(String(item.costPrice));
+    setManuallyBound(true);
     setShowPicker(false);
   };
 
+  /* 绑定状态：成本表命中或用户手动选择后 */
+  const isBound = manuallyBound;
+
   return (
-    <div className="dialog-overlay" onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog__header">
+    <div className="modal-mask" style={{ zIndex: 150 }} onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
           <h3>固定辅材</h3>
           <button
             type="button"
-            className="btn btn--icon"
+            className="modal__close"
             onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}
           >
             <Icon name="x" size={20} />
           </button>
         </div>
-        <div className="dialog__body">
+        <div className="modal__body">
           {/* 漏保规格 */}
           <div className="form-field">
             <label className="form-field__label">漏保规格</label>
@@ -131,16 +145,16 @@ export function FixedMaterialsDialog({
               value={breakerPrice}
               onChange={(e) => setBreakerPrice(e.target.value)}
             />
-            {/* v36.2-P3：未匹配时显示「未绑定」，点击弹出成本表选择 */}
-            {breakerPrice.trim() === "" ? (
+            {/* v36.2-P3：绑定状态基于成本表是否命中 */}
+            {isBound ? (
+              <span className="text-success text-sm">已绑定</span>
+            ) : (
               <span
                 className="text-danger text-sm cursor-pointer"
                 onClick={() => setShowPicker(true)}
               >
                 未绑定，点击选择成本条目
               </span>
-            ) : (
-              <span className="text-success text-sm">已绑定</span>
             )}
           </div>
 
@@ -165,7 +179,7 @@ export function FixedMaterialsDialog({
             </div>
           </div>
         </div>
-        <div className="dialog__footer">
+        <div className="modal__footer">
           <button
             type="button"
             className="btn"
