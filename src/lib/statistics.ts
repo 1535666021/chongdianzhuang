@@ -45,8 +45,9 @@ import {
   getServiceKind,
 } from "@/lib/finance";
 import type { OrderProfitResult, ServiceKind } from "@/lib/finance";
-import { findMaterialPrice } from "@/lib/costMapping";
+import { findMaterialPrice, findCostSheetPrice } from "@/lib/costMapping";
 import {
+  loadCostSheet,
   loadMaterialUsage,
   loadMaterialsLib,
   loadPlatformRates,
@@ -126,6 +127,7 @@ function calcMonthlyFromOrders(
   /* 1. 配置一次读取（品牌费率 / 材料库 / 平台扣点率 / 多平台扣点） */
   const rateConfigs = loadRateConfigs();
   const lib = loadMaterialsLib();
+  const costSheet = loadCostSheet();
   const platformRates = loadPlatformRates();
   const platforms = loadPlatforms();
 
@@ -616,6 +618,7 @@ export function getPlatformStats(
   /* 配置一次读取（品牌费率 / 材料库 / 平台扣点率 / 多平台扣点） */
   const rateConfigs = loadRateConfigs();
   const lib = loadMaterialsLib();
+  const costSheet = loadCostSheet();
   const platformRates = loadPlatformRates();
   const platforms = loadPlatforms();
 
@@ -671,7 +674,7 @@ export function getMaterialUsageSummary(orders: Order[]): {
     for (const m of o.completion?.materials ?? []) {
       const entry = byName.get(m.name) ?? { name: m.name, quantity: 0, cost: 0 };
       entry.quantity += m.quantity;
-      entry.cost += (findMaterialPrice(m.name, lib) ?? 0) * m.quantity;
+      entry.cost += ((findCostSheetPrice(m.name, costSheet) ?? findMaterialPrice(m.name, lib)) ?? 0) * m.quantity;
       byName.set(m.name, entry);
     }
   }
