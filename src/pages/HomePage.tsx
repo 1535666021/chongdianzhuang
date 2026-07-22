@@ -23,7 +23,7 @@
  * 说明：全部弹窗均为 components 下的独立组件，本页只引入调用
  * ============================================================ */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   OrderStatus,
   ORDER_STATUS_LABEL,
@@ -81,6 +81,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
   } = useApp();
 
   const [filter, setFilter] = useState<OrderFilter>(DEFAULT_ORDER_FILTER);
+  /* 搜索防抖：输入框实时响应，过滤逻辑 300ms 后执行 */
+  const [searchInput, setSearchInput] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (filter.keyword !== searchInput) {
+        patchFilter({ keyword: searchInput });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   /* 智能识别：入口栏 + 弹层（粘贴后自动解析 → 预览确认后才入库） */
   const [parseOpen, setParseOpen] = useState(false);
@@ -286,17 +296,34 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const handleConfirmImport = () => {
     if (!previewRows || previewRows.length === 0 || importBusy) return;
     const rows = previewRows;
+    /* 🛡️ 入库前校验：必填字段缺失的单直接丢弃 */
+    const validRows = rows.filter((row) => {
+      const d = row.draft;
+      return (
+        d.customerName?.trim() &&
+        d.address?.trim() &&
+        d.customerPhone?.trim()
+      );
+    });
+    if (validRows.length === 0) {
+      showToast("未解析到有效订单，请检查文本格式");
+      setPreviewRows(null);
+      setParseText("");
+      setImportBusy(false);
+      return;
+    }
     setImportBusy(true);
     window.setTimeout(() => {
-      for (const row of rows) {
+      for (const row of validRows) {
         addOrder(row.draft);
       }
       const duplicated = previewMeta.duplicated;
+      const dropped = rows.length - validRows.length;
       setPreviewRows(null);
       setParseText("");
       setImportBusy(false);
       showToast(
-        `已入库 ${rows.length} 条${duplicated > 0 ? `，跳过重复 ${duplicated} 条` : ""}`,
+        `已入库 ${validRows.length} 条${duplicated > 0 ? `，跳过重复 ${duplicated} 条` : ""}${dropped > 0 ? `，丢弃无效 ${dropped} 条` : ""}`,
       );
     }, 0);
   };
@@ -398,17 +425,17 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <input
               className="search-bar__input"
               type="search"
-              value={filter.keyword}
+              value={searchInput}
               placeholder="搜索 姓名 / 电话 / 地址"
               aria-label="搜索订单"
-              onChange={(e) => patchFilter({ keyword: e.target.value })}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
-            {filter.keyword ? (
+            {searchInput ? (
               <button
                 type="button"
                 className="modal__close"
                 aria-label="清空搜索"
-                onClick={() => patchFilter({ keyword: "" })}
+                onClick={() => { setSearchInput(""); patchFilter({ keyword: "" }); }}
               >
                 ×
               </button>
