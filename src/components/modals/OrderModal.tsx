@@ -1,6 +1,7 @@
 /* ============================================================
  * 订单新增 / 编辑弹窗
  * - 新增：open=true 且 order 为空，顶部提供"微信文本智能解析"
+ *   简化模式：只保留文本输入框 + "智能解析并保存"按钮，解析后自动保存
  * - 编辑：传入 order，表单回填（不显示解析区，避免覆盖已有数据）
  * 校验：姓名必填、手机号格式、地址必填；品牌切换自动带出默认功率
  * 规范：文本解析调用 lib/parser 的 parseOrderText，本组件零正则
@@ -81,10 +82,8 @@ export function OrderModal({ open, order, onClose }: OrderModalProps) {
     }));
   };
 
-  /* 智能解析：与首页批量入口共用同一套 lib/parser 新解析，本组件只负责调用与回填；
-   * 多条订单时回填第一条并引导去首页「智能识别」批量入库（不静默丢弃）；
-   * 未识别的字段保留原值可手补；品牌匹配 customBrands 优先 */
-  const handleParse = () => {
+  /* 智能解析并保存：解析后直接保存所有识别到的订单，无需手动回填 */
+  const handleParseAndSave = () => {
     if (!parseText.trim()) {
       showToast("请先粘贴订单文本");
       return;
@@ -94,25 +93,27 @@ export function OrderModal({ open, order, onClose }: OrderModalProps) {
       showToast("未能识别有效信息，请检查文本格式");
       return;
     }
-    const first = items[0];
-    const brandId = matchBrandIdByName(first.brandName, brands, customBrands);
-    setForm((prev) => ({
-      ...prev,
-      customerName: first.customerName || prev.customerName,
-      customerPhone: first.phone || prev.customerPhone,
-      address: first.address || prev.address,
-      brandId: brandId || prev.brandId,
-      powerKw: first.powerKw || prev.powerKw,
-      remark: first.remark || prev.remark,
-    }));
-    setErrors({});
-    showToast(
-      items.length > 1
-        ? `识别到 ${items.length} 条订单，已回填第 1 条；批量入库请用首页「智能识别」`
-        : first.platformName
-          ? `解析完成（平台：${first.platformName}），请核对后保存`
-          : "解析完成，请核对后保存",
-    );
+
+    // 解析成功，直接保存所有识别到的订单
+    let savedCount = 0;
+    for (const item of items) {
+      const brandId = matchBrandIdByName(item.brandName, brands, customBrands);
+      const draft: OrderDraft = {
+        customerName: item.customerName?.trim() || "未命名",
+        customerPhone: item.phone?.trim() || "",
+        address: item.address?.trim() || "",
+        brandId: brandId || brands[0]?.id || "",
+        powerKw: Number(item.powerKw) || 7,
+        status: OrderStatus.Pending,
+        remark: item.remark?.trim() || "",
+      };
+      addOrder(draft);
+      savedCount++;
+    }
+
+    showToast(`已保存 ${savedCount} 条订单`);
+    setParseText("");
+    onClose();
   };
 
   const validate = (): boolean => {
@@ -155,23 +156,26 @@ export function OrderModal({ open, order, onClose }: OrderModalProps) {
       title={order ? "编辑订单" : "新增订单"}
       onClose={onClose}
       footer={
-        <>
-          <button type="button" className="btn btn--outline" onClick={onClose}>
-            取消
-          </button>
-          <button
-            type="button"
-            className="btn btn--primary btn--lg"
-            onClick={handleSubmit}
-          >
-            保存
-          </button>
-        </>
+        order ? (
+          <>
+            <button type="button" className="btn btn--outline" onClick={onClose}>
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary btn--lg"
+              onClick={handleSubmit}
+            >
+              保存
+            </button>
+          </>
+        ) : undefined
       }
     >
-      {/* 智能解析区：仅新增模式显示 */}
+      {/* 新增模式：简化界面，只保留文本输入 + 解析保存按钮 */}
       {!order ? (
-        <FormField label="订单文本（选填，粘贴后一键解析填充）">
+        <div className="p-md">
+          <label className="label">订单文本（粘贴后一键解析保存）</label>
           <textarea
             className="textarea"
             value={parseText}
@@ -183,78 +187,81 @@ export function OrderModal({ open, order, onClose }: OrderModalProps) {
           />
           <button
             type="button"
-            className="btn btn--secondary btn--sm mt-sm"
-            onClick={handleParse}
+            className="btn btn--primary btn--block mt-md"
+            onClick={handleParseAndSave}
           >
-            智能解析
+            智能解析并保存
           </button>
-        </FormField>
-      ) : null}
+        </div>
+      ) : (
+        /* 编辑模式：保留原有表单字段 */
+        <>
+          <FormField label="客户姓名" required error={errors.customerName}>
+            <input
+              className={errors.customerName ? "input input--error" : "input"}
+              value={form.customerName}
+              placeholder="如：张先生"
+              onChange={(e) => patch("customerName", e.target.value)}
+            />
+          </FormField>
 
-      <FormField label="客户姓名" required error={errors.customerName}>
-        <input
-          className={errors.customerName ? "input input--error" : "input"}
-          value={form.customerName}
-          placeholder="如：张先生"
-          onChange={(e) => patch("customerName", e.target.value)}
-        />
-      </FormField>
+          <FormField label="客户电话" required error={errors.customerPhone}>
+            <input
+              className={errors.customerPhone ? "input input--error" : "input"}
+              type="tel"
+              inputMode="numeric"
+              maxLength={11}
+              value={form.customerPhone}
+              placeholder="11 位手机号"
+              onChange={(e) => patch("customerPhone", e.target.value)}
+            />
+          </FormField>
 
-      <FormField label="客户电话" required error={errors.customerPhone}>
-        <input
-          className={errors.customerPhone ? "input input--error" : "input"}
-          type="tel"
-          inputMode="numeric"
-          maxLength={11}
-          value={form.customerPhone}
-          placeholder="11 位手机号"
-          onChange={(e) => patch("customerPhone", e.target.value)}
-        />
-      </FormField>
+          <FormField label="安装地址" required error={errors.address}>
+            <textarea
+              className={errors.address ? "textarea textarea--error" : "textarea"}
+              value={form.address}
+              placeholder="小区 / 楼栋 / 车位号，尽量详细"
+              onChange={(e) => patch("address", e.target.value)}
+            />
+          </FormField>
 
-      <FormField label="安装地址" required error={errors.address}>
-        <textarea
-          className={errors.address ? "textarea textarea--error" : "textarea"}
-          value={form.address}
-          placeholder="小区 / 楼栋 / 车位号，尽量详细"
-          onChange={(e) => patch("address", e.target.value)}
-        />
-      </FormField>
+          <FormField label="充电桩品牌" required>
+            <select
+              className="select"
+              value={form.brandId}
+              onChange={(e) => handleBrandChange(e.target.value)}
+            >
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
 
-      <FormField label="充电桩品牌" required>
-        <select
-          className="select"
-          value={form.brandId}
-          onChange={(e) => handleBrandChange(e.target.value)}
-        >
-          {brands.map((brand) => (
-            <option key={brand.id} value={brand.id}>
-              {brand.name}
-            </option>
-          ))}
-        </select>
-      </FormField>
+          <FormField label="功率（kW）" required error={errors.powerKw}>
+            <input
+              className={errors.powerKw ? "input input--error" : "input"}
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.1"
+              value={form.powerKw}
+              onChange={(e) => patch("powerKw", e.target.value)}
+            />
+          </FormField>
 
-      <FormField label="功率（kW）" required error={errors.powerKw}>
-        <input
-          className={errors.powerKw ? "input input--error" : "input"}
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="0.1"
-          value={form.powerKw}
-          onChange={(e) => patch("powerKw", e.target.value)}
-        />
-      </FormField>
-
-      <FormField label="备注">
-        <textarea
-          className="textarea"
-          value={form.remark}
-          placeholder="选填：物业要求、特殊情况等"
-          onChange={(e) => patch("remark", e.target.value)}
-        />
-      </FormField>
+          <FormField label="备注">
+            <textarea
+              className="textarea"
+              value={form.remark}
+              placeholder="选填：物业要求、特殊情况等"
+              onChange={(e) => patch("remark", e.target.value)}
+            />
+          </FormField>
+        </>
+      )}
     </Modal>
   );
 }
