@@ -76,9 +76,13 @@ export function CompletedPage() {
   }, [completed]);
 
   /* ---- 回款标记（一键，无需弹窗）----
-   * 金额自动取订单 completion.profitData.customerPaid（实收），无则按 0 计 */
+   * 金额优先级：已填回款金额 > 完工实收 > 增项费 > 0 */
   const handleMarkPaid = (order: Order) => {
-    const amount = order.completion?.profitData?.customerPaid ?? 0;
+    const amount =
+      order.payment?.amount ??
+      order.completion?.profitData?.customerPaid ??
+      order.completion?.addonFee ??
+      0;
     updateOrder(order.id, {
       ...order,
       payment: {
@@ -237,3 +241,5 @@ export function CompletedPage() {
     </div>
   );
 }
+
+/* v36.2-P3-1-fix: 回款金额取值优先级修复确认 */
