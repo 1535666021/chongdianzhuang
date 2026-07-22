@@ -29,6 +29,7 @@ import { Modal } from "@/components/common/Modal";
 import { FormField } from "@/components/common/FormField";
 import { ScriptDialog } from "@/components/ScriptDialog";
 import { FixedMaterialsDialog } from "@/components/FixedMaterialsDialog";
+import { CostSheetPicker } from "@/components/CostSheetPicker";
 import { useApp } from "@/context/AppContext";
 import { getAddonOptions } from "@/lib/addonOptions";
 import { findBrand, mergeBrands } from "@/lib/brandMaterials";
@@ -56,6 +57,7 @@ import { getPlatformRate } from "@/lib/platforms";
 import { getScript } from "@/lib/scripts";
 import {
   loadBrandScripts,
+  loadCostSheet,
   loadFormPresets,
   loadLeapmotorAddons,
   loadMaterialsLib,
@@ -64,7 +66,7 @@ import {
   loadRateConfigs,
 } from "@/lib/storage";
 import { formatMoney, todayStr } from "@/lib/utils";
-import type { CompleteModalProps, MaterialItem } from "@/types";
+import type { CompleteModalProps, MaterialItem, CostSheetItem } from "@/types";
 
 interface CompleteErrors {
   completeDate?: string;
@@ -138,6 +140,9 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
   const [actualReceivedInput, setActualReceivedInput] = useState("");
   /* 任务v36.1 FAIL-5：预估到手计算明细展开开关 */
   const [showCostDetail, setShowCostDetail] = useState(false);
+  const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
+  const [showCostPicker, setShowCostPicker] = useState(false);
+  const [pickerMaterialName, setPickerMaterialName] = useState("");
 
   /* 打开时初始化（勘测数据贯通预填）：
    * 完工日期=当天 / 安装师傅=预约师傅或默认师傅 /
@@ -242,6 +247,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
       cableTotalMeters:
         Number(actualCable) || Number(order.survey?.cableDistance) || 0,
       lib: loadMaterialsLib(),
+      costSheet,
       fixedAux: order.fixedAux,
     });
     const materialCost = materialBreakdown.total;
@@ -692,7 +698,19 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                 {/* 任务v36.2：固定辅材拆三行（漏保/PVC管/扎带+胶带），三项和=总额 */}
                 <div>
                   材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
-                  （电缆{formatMoney(completionCalc.materialBreakdown.cable)}
+                  （电缆{completionCalc.materialBreakdown.cable > 0
+                    ? formatMoney(completionCalc.materialBreakdown.cable)
+                    : (
+                      <span
+                        className="text-danger cursor-pointer"
+                        onClick={() => {
+                          setPickerMaterialName("电缆");
+                          setShowCostPicker(true);
+                        }}
+                      >
+                        未绑定
+                      </span>
+                    )}
                   +其他{formatMoney(completionCalc.materialBreakdown.other)}）
                 </div>
                 {completionCalc.materialBreakdown.fixedAuxItems ? (
@@ -701,11 +719,33 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                       {completionCalc.materialBreakdown.fixedAuxItems.breakerLabel}
                       {completionCalc.materialBreakdown.fixedAuxItems.breakerUnitPrice != null
                         ? ` ${formatMoney(completionCalc.materialBreakdown.fixedAuxItems.breakerCost)}`
-                        : ""}
+                        : (
+                          <span
+                            className="text-danger cursor-pointer"
+                            onClick={() => {
+                              setPickerMaterialName("漏保");
+                              setShowCostPicker(true);
+                            }}
+                          >
+                            （未绑定，点击选择）
+                          </span>
+                        )}
                     </div>
                     <div>
                       PVC管 {completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}米{" "}
-                      {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.pvcCost)}
+                      {completionCalc.materialBreakdown.fixedAuxItems.pvcCost > 0
+                        ? formatMoney(completionCalc.materialBreakdown.fixedAuxItems.pvcCost)
+                        : (
+                          <span
+                            className="text-danger cursor-pointer"
+                            onClick={() => {
+                              setPickerMaterialName("PVC管");
+                              setShowCostPicker(true);
+                            }}
+                          >
+                            未绑定
+                          </span>
+                        )}
                     </div>
                     <div>
                       扎带+胶带 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.tieTapeCost)}
@@ -814,6 +854,18 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
         showToast("固定辅材已保存");
       }}
     />
+
+    {/* v36.2-P2：成本表选择弹窗 */}
+    {showCostPicker && (
+      <CostSheetPicker
+        materialName={pickerMaterialName}
+        onSelect={(item) => {
+          setCostSheet(loadCostSheet());
+          setShowCostPicker(false);
+        }}
+        onClose={() => setShowCostPicker(false)}
+      />
+    )}
     </>
   );
 }
