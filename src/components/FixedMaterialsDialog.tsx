@@ -88,19 +88,19 @@ export function FixedMaterialsDialog({
   };
 
   return (
-    <div className="dialog-overlay" style={{ zIndex: 150 }} onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog__header">
+    <div className="modal-mask" style={{ zIndex: 150 }} onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
           <h3>固定辅材</h3>
           <button
             type="button"
-            className="btn btn--icon"
+            className="modal__close"
             onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}
           >
             <Icon name="x" size={20} />
           </button>
         </div>
-        <div className="dialog__body">
+        <div className="modal__body">
           {/* 漏保规格 */}
           <div className="form-field">
             <label className="form-field__label">漏保规格</label>
@@ -164,7 +164,7 @@ export function FixedMaterialsDialog({
             </div>
           </div>
         </div>
-        <div className="dialog__footer">
+        <div className="modal__footer">
           <button
             type="button"
             className="btn"
