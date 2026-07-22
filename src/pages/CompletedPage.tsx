@@ -76,11 +76,13 @@ export function CompletedPage() {
   }, [completed]);
 
   /* ---- 回款标记（一键，无需弹窗）----
-   * 金额优先级：已填回款金额 > 完工实收 > 增项费 > 0 */
+   * 金额优先级：已填回款金额 > 新完工实收 > v7老单legacyProfit > 增项费 > 0 */
   const handleMarkPaid = (order: Order) => {
+    const legacy = order.completion?.legacyProfit as Record<string, unknown> | undefined;
     const amount =
       order.payment?.amount ??
       order.completion?.profitData?.customerPaid ??
+      (typeof legacy?.customerPaid === "number" ? legacy.customerPaid : undefined) ??
       order.completion?.addonFee ??
       0;
     updateOrder(order.id, {
