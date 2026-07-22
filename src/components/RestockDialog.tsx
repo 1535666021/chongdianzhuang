@@ -40,6 +40,8 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
       orders.filter(
         (o) =>
           o.status !== OrderStatus.Trash &&
+          o.status !== OrderStatus.Completed &&
+          o.status !== OrderStatus.Cancelled &&
           o.restockStatus === "needed" &&
           isInstallOrder(o),
       ),

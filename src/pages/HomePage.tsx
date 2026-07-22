@@ -163,7 +163,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const restockNeededCount = useMemo(
     () =>
       activeOrders.filter(
-        (o) => o.restockStatus === "needed" && isInstallOrder(o),
+        (o) =>
+          o.restockStatus === "needed" &&
+          isInstallOrder(o) &&
+          o.status !== OrderStatus.Completed &&
+          o.status !== OrderStatus.Cancelled,
       ).length,
     [activeOrders],
   );
