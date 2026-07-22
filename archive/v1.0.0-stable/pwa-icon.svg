@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 充电桩订单助手图标：能源绿圆角底 + 白色闪电 -->
+  <rect width="512" height="512" rx="96" fill="#2e7d5b"/>
+  <path
+    d="M288 64 L160 288 L240 288 L224 448 L352 224 L272 224 Z"
+    fill="#ffffff"
+  />
+</svg>

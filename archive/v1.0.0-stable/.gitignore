@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 构建红线：源入口 HTML 禁止被 dist/ 产物覆盖提交
+index.html
