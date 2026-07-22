@@ -6,13 +6,14 @@
 
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/common/Icon";
-import { loadMaterialsLib } from "@/lib/storage";
+import { loadMaterialsLib, loadCostSheet } from "@/lib/storage";
 import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
 import {
   BREAKER_SPECS,
   findBreakerPrice,
   TIE_TAPE_PACK_PRICE,
 } from "@/lib/fixedAux";
+import { findCostSheetPrice } from "@/lib/costMapping";
 import { CostSheetPicker } from "@/components/CostSheetPicker";
 import type { CostSheetItem } from "@/types";
 
@@ -45,10 +46,13 @@ export function FixedMaterialsDialog({
   const [breakerPrice, setBreakerPrice] = useState("");
   const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
   const [lib, setLib] = useState<MaterialItemLib[]>([]);
+  const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
+  const [manuallyBound, setManuallyBound] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     setLib(loadMaterialsLib());
+    setCostSheet(loadCostSheet());
   }, []);
 
   useEffect(() => {
@@ -60,15 +64,25 @@ export function FixedMaterialsDialog({
     );
     setSpec(target.breakerSpec);
     setPvcMeters(target.pvcMeters);
-  }, [init, order?.fixedAux]);
+    /* v36.2-P2-fix：判断绑定状态（成本表命中=已绑定） */
+    const costPrice = findCostSheetPrice(`漏保 ${target.breakerSpec}`, costSheet);
+    setManuallyBound(costPrice !== null);
+  }, [init, order?.fixedAux, costSheet]);
 
-  /* 换规格：价格联动——查材料库 */
+  /* 切换规格时重置手动绑定状态 */
   useEffect(() => {
-    const matched = findBreakerPrice(spec, lib);
-    if (matched !== null) {
-      setBreakerPrice(String(matched));
+    setManuallyBound(false);
+  }, [spec]);
+
+  /* 换规格：价格联动——优先查成本表（v36.2-P2 成本结算统一走成本表） */
+  useEffect(() => {
+    const costPrice = findCostSheetPrice(`漏保 ${spec}`, costSheet);
+    if (costPrice !== null) {
+      setBreakerPrice(String(costPrice));
+      setManuallyBound(true);
     }
-  }, [spec, lib]);
+    /* 成本表未命中：不自动填充，保留当前值（init传入或用户手改） */
+  }, [spec, costSheet]);
 
   const handleConfirm = () => {
     /* 空框=未匹配（null），成本按 0 计；不兜底 */
@@ -84,8 +98,12 @@ export function FixedMaterialsDialog({
 
   const handleSelectFromPicker = (item: CostSheetItem) => {
     setBreakerPrice(String(item.costPrice));
+    setManuallyBound(true);
     setShowPicker(false);
   };
+
+  /* 绑定状态：成本表命中或用户手动选择后 */
+  const isBound = manuallyBound;
 
   return (
     <div className="modal-mask" style={{ zIndex: 150 }} onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
@@ -130,16 +148,16 @@ export function FixedMaterialsDialog({
               value={breakerPrice}
               onChange={(e) => setBreakerPrice(e.target.value)}
             />
-            {/* v36.2-P2：未匹配时显示「未绑定」，点击弹出成本表选择 */}
-            {breakerPrice.trim() === "" ? (
+            {/* v36.2-P2：绑定状态基于成本表是否命中 */}
+            {isBound ? (
+              <span className="text-success text-sm">已绑定</span>
+            ) : (
               <span
                 className="text-danger text-sm cursor-pointer"
                 onClick={() => setShowPicker(true)}
               >
                 未绑定，点击选择成本条目
               </span>
-            ) : (
-              <span className="text-success text-sm">已绑定</span>
             )}
           </div>
 
