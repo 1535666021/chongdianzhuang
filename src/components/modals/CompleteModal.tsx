@@ -751,7 +751,16 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                       {completionCalc.materialBreakdown.fixedAuxItems.leakBoxUnitPrice != null ? (
                         <span className="text-success text-sm">已绑定</span>
                       ) : (
-                        <span className="text-danger text-sm">未绑定</span>
+                        <span
+                          className="text-danger text-sm"
+                          style={{ cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => {
+                            setPickerMaterialName("漏保盒");
+                            setShowCostPicker(true);
+                          }}
+                        >
+                          未绑定
+                        </span>
                       )}
                     </div>
                   </div>
