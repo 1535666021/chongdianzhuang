@@ -123,17 +123,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toastTimer = useRef<number | null>(null);
 
   /* ---- 首次加载：版本迁移 → 读 storage ---- */
+  /* ---- 首次加载：版本迁移 → 读 storage（数据>300条时分批，避免首屏阻塞） ---- */
   useEffect(() => {
     ensureDataVersion();
-    setOrders(loadOrders());
+    const all = loadOrders();
+    if (all.length > 300) {
+      setOrders(all.slice(0, 30));
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(() => setOrders(all));
+      } else {
+        setTimeout(() => setOrders(all), 200);
+      }
+    } else {
+      setOrders(all);
+    }
     setSettings(loadSettings());
     setCustomBrands(loadCustomBrands());
     setHydrated(true);
   }, []);
 
-  /* ---- 变更自动持久化（hydrated 后才写，避免首刷覆盖存储） ---- */
+  /* ---- 变更自动持久化：写入防抖 300ms，连续操作只存最后一次 ---- */
   useEffect(() => {
-    if (hydrated) saveOrders(orders);
+    if (!hydrated) return;
+    const timer = setTimeout(() => {
+      saveOrders(orders);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [orders, hydrated]);
 
   useEffect(() => {
