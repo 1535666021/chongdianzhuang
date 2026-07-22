@@ -7,7 +7,7 @@
  *   客户增项 customerPaid = completion.legacyProfit?.customerPaid ?? completion.profitData?.customerPaid ?? calcOrderProfit(...).customerAddonFee
  *   材料成本 materialCost = completion.legacyProfit?.materialCost ?? completion.profitData?.materialCost ?? calcOrderProfit(...).materialCost
  *   利润 profit         = completion.legacyProfit?.profit       ?? completion.profitData?.profit       ?? calcOrderProfit(...).profit
- *   平台扣点 deduction  = completion.platformDeduction ?? 0（v7 老单 5/6 月无该字段按 0）
+ *   平台扣点 deduction  = completion.platformDeduction ?? calc.platformDeduction（v7 老单无快照时走 calcOrderProfit 按平台类型自动计算扣点）
  * legacyProfit / profitData 快照数值只读，禁止重算；Number() 转换 + 有限数防御，
  * 非法值按 undefined 继续下探。calcOrderProfit 兜底链仍按 brandId 查费率配置、
  * 缺省回退 DEFAULT_RATE_CONFIG（finance.ts 口径）。
@@ -103,7 +103,7 @@ interface OrderFinanceRow {
   baseFee: number;
   /** 客户增项付费（快照 customerPaid 优先） */
   customerPaid: number;
-  /** 平台扣点（completion.platformDeduction，缺省 0） */
+  /** 平台扣点（completion.platformDeduction 优先，缺省走 calcOrderProfit 按平台类型自动计算） */
   deduction: number;
   /** 材料成本（快照 materialCost 优先） */
   materialCost: number;
@@ -132,7 +132,7 @@ function calcMonthlyFromOrders(
   const platforms = loadPlatforms();
 
   /* 2. 逐单三级链取数：legacyProfit（v7 快照，只读）→ profitData（新完工快照）
-   *    → calcOrderProfit 兜底；扣点取 completion.platformDeduction，缺省 0 */
+   *    → calcOrderProfit 兜底；扣点取 completion.platformDeduction，缺省走 calc.platformDeduction */
   const rows: OrderFinanceRow[] = monthOrders.map((order) => {
     const rateConfig = rateConfigs.find(
       (c) => c.brandId === order.brandId,
@@ -159,7 +159,7 @@ function calcMonthlyFromOrders(
         pickNum(legacy?.customerPaid) ??
         pickNum(snap?.customerPaid) ??
         calc.customerAddonFee,
-      deduction: pickNum(completion?.platformDeduction) ?? 0,
+      deduction: pickNum(completion?.platformDeduction) ?? calc.platformDeduction,
       materialCost:
         pickNum(legacy?.materialCost) ??
         pickNum(snap?.materialCost) ??
@@ -271,7 +271,7 @@ function calcMonthlyFromOrders(
       key: "deduction",
       label: "平台扣点",
       amount: deductionTotal,
-      formula: `平台扣点合计（只扣客户增项付费；老单无扣点字段按 0）= ${numText(deductionTotal)}`,
+      formula: `平台扣点合计（只扣客户增项付费；老单无快照时走 calcOrderProfit 按平台类型自动计算）= ${numText(deductionTotal)}`,
       entries: moneyEntries((r) => r.deduction),
     },
     {
