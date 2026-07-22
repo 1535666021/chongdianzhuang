@@ -39,6 +39,7 @@ export function FixedMaterialsDialog({
   onSave,
   onClose,
 }: FixedMaterialsDialogProps) {
+  if (!open) return null;
   const resolvedInit = init ?? order?.fixedAux ?? { breakerSpec: "C40", breakerPrice: null, pvcMeters: cableMeters };
   const [spec, setSpec] = useState(resolvedInit.breakerSpec);
   const [breakerPrice, setBreakerPrice] = useState("");
