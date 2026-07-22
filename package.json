@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "node build-check.cjs && tsc --noEmit && vite build && node build-check.cjs --check-dist",
     "build:skip-check": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:prod": "tsc --noEmit && vite build",
+    "deploy": "npm run build && gh-pages -d dist",
+    "deploy:skip-check": "npm run build:prod && gh-pages -d dist"
   },
   "dependencies": {
     "dayjs": "^1.11.21",
@@ -21,6 +24,8 @@
     "@vitejs/plugin-react": "^4.3.1",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
-    "vite-plugin-pwa": "^0.20.1"
-  }
+    "vite-plugin-pwa": "^0.20.1",
+    "gh-pages": "^6.1.1"
+  },
+  "homepage": "https://1535666021.github.io/chongdianzhuang/"
 }
