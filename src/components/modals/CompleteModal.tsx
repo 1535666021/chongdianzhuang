@@ -246,7 +246,6 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
       materials: validMaterials,
       cableTotalMeters:
         Number(actualCable) || Number(order.survey?.cableDistance) || 0,
-      lib: loadMaterialsLib(),
       costSheet,
       fixedAux: order.fixedAux,
     });

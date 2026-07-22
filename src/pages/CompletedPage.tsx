@@ -2,7 +2,7 @@
  * 已完成页：仅展示「已完成」状态订单
  * 排序：完工日期倒序（最近完工在最前）
  * 筛选：全部 / 未回款 / 已回款（按 order.payment?.paid 判定，无 payment 视为未回款）
- * 操作：删除订单（二次确认，收进卡片 ⋯ 菜单）；标记回款（金额弹窗）/ 取消回款
+ * 操作：删除订单（二次确认，收进卡片 ⋯ 菜单）；标记回款（一键，无需弹窗）/ 取消回款
  * 阶段2-J2 布局重构：
  *   - 页头/筛选风格与首页一致：搜索框常驻（Icon search，姓名/电话/地址）、
  *     回款筛选 chips 一行横滑（功能逻辑不变）
@@ -16,8 +16,6 @@ import { Icon } from "@/components/common/Icon";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FilterChips } from "@/components/common/FilterChips";
 import type { ChipOption } from "@/components/common/FilterChips";
-import { FormField } from "@/components/common/FormField";
-import { Modal } from "@/components/common/Modal";
 import { OrderCard } from "@/components/order/OrderCard";
 import { useApp } from "@/context/AppContext";
 import { filterOrders, formatMoney } from "@/lib/utils";
@@ -42,9 +40,6 @@ export function CompletedPage() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter | "">("");
   /* 常驻搜索关键词（姓名 / 电话 / 地址，复用首页 filterOrders 逻辑） */
   const [keyword, setKeyword] = useState("");
-  /* 标记回款金额弹窗：payTarget 非空即打开，金额为字符串草稿 */
-  const [payTarget, setPayTarget] = useState<Order | null>(null);
-  const [payAmount, setPayAmount] = useState("");
 
   /* 已完成订单：按完工日期倒序（无完工日期的排最后） */
   const completed = useMemo(
@@ -80,50 +75,32 @@ export function CompletedPage() {
     };
   }, [completed]);
 
-  /* ---- 回款标记（标记/取消共用入口）----
-   * AppContext 通用 updateOrder 已可承载 payment（OrderDraft 含 payment 字段）；
-   * 展开整单传入，context 浅合并后等价于仅改 payment，无需新增 context 动作 */
-  const setOrderPaid = (order: Order, paid: boolean, amount?: number) => {
+  /* ---- 回款标记（一键，无需弹窗）----
+   * 金额自动取订单 completion.profitData.customerPaid（实收），无则按 0 计 */
+  const handleMarkPaid = (order: Order) => {
+    const amount = order.completion?.profitData?.customerPaid ?? 0;
     updateOrder(order.id, {
       ...order,
       payment: {
         ...order.payment,
-        paid,
-        /* 取消回款保留原金额，再次标记时作弹窗默认值 */
-        amount: amount ?? order.payment?.amount,
+        paid: true,
+        amount,
       },
     });
-  };
-
-  /* ---- 标记回款：打开金额弹窗（默认带出已有金额） ---- */
-  const openPayModal = (order: Order) => {
-    setPayTarget(order);
-    setPayAmount(
-      order.payment?.amount != null ? String(order.payment.amount) : "",
-    );
-  };
-
-  /* ---- 标记回款：确认（金额选填，空 = 未填金额按 0 计） ---- */
-  const handleConfirmPay = () => {
-    if (!payTarget) return;
-    const trimmed = payAmount.trim();
-    const amount = trimmed === "" ? undefined : Number(trimmed);
-    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) {
-      showToast("回款金额请填写不小于 0 的数字");
-      return;
-    }
-    setOrderPaid(payTarget, true, amount);
-    setPayTarget(null);
-    showToast(
-      amount === undefined
-        ? "已标记回款（未填金额按 0 计）"
-        : `已标记回款 ${formatMoney(amount)}`,
-    );
+    showToast(`已标记回款 ${formatMoney(amount)}`);
   };
 
   /* ---- 取消回款 ---- */
   const handleCancelPaid = (order: Order) => {
-    setOrderPaid(order, false);
+    updateOrder(order.id, {
+      ...order,
+      payment: {
+        ...order.payment,
+        paid: false,
+        /* 取消回款保留原金额，再次标记时作默认值 */
+        amount: order.payment?.amount,
+      },
+    });
     showToast("已取消回款标记");
   };
 
@@ -202,7 +179,7 @@ export function CompletedPage() {
                 page="completed"
                 onDelete={setDeleteTarget}
               />
-              {/* 回款操作行：标记回款 / 取消回款 */}
+              {/* 回款操作行：标记回款（一键）/ 取消回款 */}
               <div className="appt-order-actions">
                 <span
                   className={
@@ -231,7 +208,7 @@ export function CompletedPage() {
                   <button
                     type="button"
                     className="btn btn--primary btn--sm"
-                    onClick={() => openPayModal(order)}
+                    onClick={() => handleMarkPaid(order)}
                   >
                     标记回款
                   </button>
@@ -257,48 +234,6 @@ export function CompletedPage() {
         }}
         onCancel={() => setDeleteTarget(null)}
       />
-
-      {/* 标记回款：金额输入弹窗（金额选填，默认带出已有金额） */}
-      <Modal
-        open={payTarget !== null}
-        title="标记回款"
-        onClose={() => setPayTarget(null)}
-        footer={
-          <>
-            <button
-              type="button"
-              className="btn btn--outline"
-              onClick={() => setPayTarget(null)}
-            >
-              取消
-            </button>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={handleConfirmPay}
-            >
-              确定
-            </button>
-          </>
-        }
-      >
-        <FormField label="回款金额（元，选填）">
-          <input
-            className="input"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={payAmount}
-            placeholder="不填按 0 计入统计"
-            onChange={(e) => setPayAmount(e.target.value)}
-          />
-        </FormField>
-        <p className="text-sm text-tertiary mt-sm">
-          客户：{payTarget?.customerName ?? ""}；不填金额则该单按 0
-          计入未回款金额统计。
-        </p>
-      </Modal>
     </div>
   );
 }
