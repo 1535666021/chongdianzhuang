@@ -181,7 +181,7 @@ export function FixedMaterialsDialog({
             className="text-danger text-sm cursor-pointer"
             onClick={() => {
               const items = loadCostSheet().filter(
-                (it) => it.materialName === `漏保 ${spec}`,
+                (it) => it.name === `漏保 ${spec}`,
               );
               setPickerItems(items);
               setShowPicker(true);
