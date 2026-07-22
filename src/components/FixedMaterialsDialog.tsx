@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/common/Icon";
 import { loadMaterialsLib } from "@/lib/storage";
-import type { FixedAuxSelection, MaterialItemLib } from "@/types";
+import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
 import {
   BREAKER_SPECS,
   findBreakerPrice,
@@ -17,21 +17,32 @@ import { CostSheetPicker } from "@/components/CostSheetPicker";
 import type { CostSheetItem } from "@/types";
 
 interface FixedMaterialsDialogProps {
-  init: FixedAuxSelection;
+  open?: boolean;
+  order?: Order;
+  brandName?: string;
+  init?: FixedAuxSelection;
   cableMeters: number;
-  onConfirm: (sel: FixedAuxSelection) => void;
-  onCancel: () => void;
+  onConfirm?: (sel: FixedAuxSelection) => void;
+  onCancel?: () => void;
+  onSave?: (sel: FixedAuxSelection) => void;
+  onClose?: () => void;
 }
 
 export function FixedMaterialsDialog({
+  open,
+  order,
+  brandName: _brandName,
   init,
   cableMeters,
   onConfirm,
   onCancel,
+  onSave,
+  onClose,
 }: FixedMaterialsDialogProps) {
-  const [spec, setSpec] = useState(init.breakerSpec);
+  const resolvedInit = init ?? order?.fixedAux ?? { breakerSpec: "C40", breakerPrice: null, pvcMeters: cableMeters };
+  const [spec, setSpec] = useState(resolvedInit.breakerSpec);
   const [breakerPrice, setBreakerPrice] = useState("");
-  const [pvcMeters, setPvcMeters] = useState(init.pvcMeters);
+  const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
   const [lib, setLib] = useState<MaterialItemLib[]>([]);
   const [showPicker, setShowPicker] = useState(false);
 
@@ -41,12 +52,14 @@ export function FixedMaterialsDialog({
 
   useEffect(() => {
     /* 任务v36.1 FAIL-3：未匹配价格=null → 价格框置空（严禁自动填兜底数） */
+    const target = init ?? order?.fixedAux;
+    if (!target) return;
     setBreakerPrice(
-      init.breakerPrice != null ? String(init.breakerPrice) : "",
+      target.breakerPrice != null ? String(target.breakerPrice) : "",
     );
-    setSpec(init.breakerSpec);
-    setPvcMeters(init.pvcMeters);
-  }, [init]);
+    setSpec(target.breakerSpec);
+    setPvcMeters(target.pvcMeters);
+  }, [init, order?.fixedAux]);
 
   /* 换规格：价格联动——查材料库 */
   useEffect(() => {
@@ -64,7 +77,8 @@ export function FixedMaterialsDialog({
         breakerPrice.trim() === "" ? null : Number(breakerPrice),
       pvcMeters,
     };
-    onConfirm(sel);
+    if (onSave) onSave(sel);
+    else if (onConfirm) onConfirm(sel);
   };
 
   const handleSelectFromPicker = (item: CostSheetItem) => {
@@ -73,14 +87,14 @@ export function FixedMaterialsDialog({
   };
 
   return (
-    <div className="dialog-overlay" onClick={onCancel}>
+    <div className="dialog-overlay" onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog__header">
           <h3>固定辅材</h3>
           <button
             type="button"
             className="btn btn--icon"
-            onClick={onCancel}
+            onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}
           >
             <Icon name="x" size={20} />
           </button>
@@ -153,7 +167,7 @@ export function FixedMaterialsDialog({
           <button
             type="button"
             className="btn"
-            onClick={onCancel}
+            onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}
           >
             取消
           </button>
