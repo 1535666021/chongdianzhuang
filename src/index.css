@@ -723,6 +723,55 @@ img {
   flex: 1;
 }
 
+/* ---- 成本表选择弹窗（CostSheetPicker，v36.2-P2） ---- */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg-mask);
+  z-index: var(--z-index-modal-mask);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 480px;
+  max-height: 70vh;
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  z-index: var(--z-index-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--color-divider);
+  flex-shrink: 0;
+}
+
+.dialog__header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+}
+
+.dialog__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+
 /* ---- Toast 轻提示 ---- */
 .toast {
   position: fixed;

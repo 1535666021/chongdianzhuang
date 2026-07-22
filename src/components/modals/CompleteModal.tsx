@@ -786,7 +786,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                           className="text-success text-sm"
                           style={{ cursor: "pointer", textDecoration: "underline" }}
                           onClick={() => {
-                            setPickerMaterialName("漏保");
+                            setPickerMaterialName("漏保盒");
                             setShowCostPicker(true);
                           }}
                         >
