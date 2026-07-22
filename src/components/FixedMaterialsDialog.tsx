@@ -1,20 +1,20 @@
 /* ============================================================
- * 固定辅材弹窗子窗口（v36.2-P2 扩展：未绑定点击弹出成本表选择）
+ * 固定辅材弹窗子窗口（v36.2-P3：成本核算全面走成本表）
  * 功能：漏保规格选择 + PVC米数 + 成本表价格联动
  * 规范：业务逻辑收敛 src/lib，本组件只做渲染交互
  * ============================================================ */
 
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/common/Icon";
-import { loadMaterialsLib } from "@/lib/storage";
-import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
+import { loadCostSheet } from "@/lib/storage";
+import type { FixedAuxSelection, Order, CostSheetItem } from "@/types";
 import {
   BREAKER_SPECS,
-  findBreakerPrice,
-  TIE_TAPE_PACK_PRICE,
+  findBreakerPriceFromCostSheet,
 } from "@/lib/fixedAux";
 import { CostSheetPicker } from "@/components/CostSheetPicker";
-import type { CostSheetItem } from "@/types";
+import type { CostSheetItem as CostSheetItemType } from "@/types";
+import { findCostSheetPrice } from "@/lib/costMapping";
 
 interface FixedMaterialsDialogProps {
   open?: boolean;
@@ -40,15 +40,16 @@ export function FixedMaterialsDialog({
   onClose,
 }: FixedMaterialsDialogProps) {
   if (!open) return null;
+
   const resolvedInit = init ?? order?.fixedAux ?? { breakerSpec: "C40", breakerPrice: null, pvcMeters: cableMeters };
   const [spec, setSpec] = useState(resolvedInit.breakerSpec);
   const [breakerPrice, setBreakerPrice] = useState("");
   const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
-  const [lib, setLib] = useState<MaterialItemLib[]>([]);
+  const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
-    setLib(loadMaterialsLib());
+    setCostSheet(loadCostSheet());
   }, []);
 
   useEffect(() => {
@@ -62,13 +63,13 @@ export function FixedMaterialsDialog({
     setPvcMeters(target.pvcMeters);
   }, [init, order?.fixedAux]);
 
-  /* 换规格：价格联动——查材料库 */
+  /* 换规格：价格联动——查成本表（v36.2-P3） */
   useEffect(() => {
-    const matched = findBreakerPrice(spec, lib);
+    const matched = findBreakerPriceFromCostSheet(spec, costSheet);
     if (matched !== null) {
       setBreakerPrice(String(matched));
     }
-  }, [spec, lib]);
+  }, [spec, costSheet]);
 
   const handleConfirm = () => {
     /* 空框=未匹配（null），成本按 0 计；不兜底 */
@@ -82,7 +83,7 @@ export function FixedMaterialsDialog({
     else if (onConfirm) onConfirm(sel);
   };
 
-  const handleSelectFromPicker = (item: CostSheetItem) => {
+  const handleSelectFromPicker = (item: CostSheetItemType) => {
     setBreakerPrice(String(item.costPrice));
     setShowPicker(false);
   };
@@ -130,7 +131,7 @@ export function FixedMaterialsDialog({
               value={breakerPrice}
               onChange={(e) => setBreakerPrice(e.target.value)}
             />
-            {/* v36.2-P2：未匹配时显示「未绑定」，点击弹出成本表选择 */}
+            {/* v36.2-P3：未匹配时显示「未绑定」，点击弹出成本表选择 */}
             {breakerPrice.trim() === "" ? (
               <span
                 className="text-danger text-sm cursor-pointer"
@@ -156,11 +157,11 @@ export function FixedMaterialsDialog({
             />
           </div>
 
-          {/* 扎带+胶带（固定价，只展示） */}
+          {/* 漏保盒（v36.2-P3：原扎带+胶带辅材包改名） */}
           <div className="form-field">
-            <label className="form-field__label">扎带+胶带辅材包</label>
+            <label className="form-field__label">漏保盒</label>
             <div className="text-tertiary">
-              固定价 {TIE_TAPE_PACK_PRICE} 元
+              成本表定价
             </div>
           </div>
         </div>

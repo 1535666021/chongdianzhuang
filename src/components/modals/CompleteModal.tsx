@@ -695,7 +695,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     Math.abs(completionCalc.profitData.platformDeduction),
                   )}
                 </div>
-                {/* 任务v36.2：固定辅材拆三行（漏保/PVC管/扎带+胶带），三项和=总额 */}
+                {/* 任务v36.2-P3：固定辅材拆三行（漏保/PVC管/漏保盒），三项和=总额 */}
                 <div>
                   材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
                   （电缆{completionCalc.materialBreakdown.cable > 0
@@ -748,7 +748,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                         )}
                     </div>
                     <div>
-                      扎带+胶带 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.tieTapeCost)}
+                      漏保盒 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.leakBoxCost)}
                     </div>
                   </div>
                 ) : null}

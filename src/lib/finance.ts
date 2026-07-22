@@ -15,7 +15,6 @@ import type {
   CostSheetItem,
 } from "@/types";
 import {
-  FIXED_AUX_MATERIALS,
   findMaterialPrice,
   findCostSheetPrice,
   type MatLibEntry,
@@ -79,7 +78,7 @@ function round2(n: number): number {
 }
 
 /**
- * v36.2-P2 扩展：成本结算统一走成本表
+ * v36.2-P3：成本结算统一走成本表（增项材料）
  * @param costSheet 成本表（有值时优先查成本表，无值 fallback 材料库）
  */
 export function calcMaterialCost(
@@ -108,12 +107,13 @@ export function calcMaterialCost(
   return { total: round2(total), unmapped };
 }
 
-/** 固定辅材成本：每单固定一份，不向客户收费，价格以 FIXED_AUX_MATERIALS 自带单价为准 */
-function calcFixedAuxCost(): number {
-  return FIXED_AUX_MATERIALS.reduce(
-    (sum, item) => sum + (item.unitPrice ?? 0) * item.quantity,
-    0,
-  );
+/** 固定辅材成本（v36.2-P3：全部走成本表） */
+function calcFixedAuxCost(costSheet?: CostSheetItem[]): number {
+  if (!costSheet || costSheet.length === 0) return 0;
+  const breaker = findCostSheetPrice("漏保 C40", costSheet) ?? 0;
+  const pvc = findCostSheetPrice("PVC管", costSheet) ?? 0;
+  const leakBox = findCostSheetPrice("漏保盒", costSheet) ?? 0;
+  return round2(breaker * 1 + pvc * 30 + leakBox); // 默认30米PVC
 }
 
 /* ------------------------------------------------------------
@@ -134,7 +134,7 @@ export interface CalcProfitParams {
   platforms?: PlatformConfig[];
   /** 材料库 */
   lib: MatLibEntry[];
-  /** 成本表（v36.2-P2 新增：成本结算统一走成本表） */
+  /** 成本表（v36.2-P3：成本结算统一走成本表） */
   costSheet?: CostSheetItem[];
   /** 重新核算：单单扣点率覆盖（小数），不传按平台类型 */
   platformRateOverride?: number;
@@ -174,7 +174,7 @@ function formatRate(rate: number): string {
  * - 客户增项费：套包材料（电缆/PVC管）仅超米部分收费，其他材料按 unitPrice×quantity 全额收费
  * - 平台扣点：只对客户增项费计（维修/安装/勘测费不扣点；维修单增项材料费同样扣点且计成本）
  * - 材料成本：全部增项材料（含套包免费部分）+ 固定辅材一份，未命中映射计 0
- * v36.2-P2：成本结算优先走成本表
+ * v36.2-P3：成本结算统一走成本表
  */
 export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
   const {
@@ -243,13 +243,13 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
   const platformDeduction = round2(customerAddonFee * platformRate);
 
   /* 4. 材料成本：全部增项材料（含套包免费部分）+ 固定辅材一份
-   * v36.2-P2：优先走成本表 */
+   * v36.2-P3：优先走成本表 */
   const { total: addonMaterialCost, unmapped } = calcMaterialCost(
     materials,
     lib,
     costSheet,
   );
-  const fixedAuxCost = round2(calcFixedAuxCost());
+  const fixedAuxCost = round2(calcFixedAuxCost(costSheet));
   const materialCost = round2(addonMaterialCost + fixedAuxCost);
 
   /* 5. 利润 = 客户增项费扣点后 + 服务费 - 材料成本 */
@@ -270,9 +270,6 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
       ? `${item.name} = ${formatMoney(price)} × ${item.quantity} = ${formatMoney(price * item.quantity)}`
       : `${item.name} 未命中成本表/材料库，成本计 ${formatMoney(0)}`;
   });
-  const fixedAuxText = FIXED_AUX_MATERIALS.map(
-    (aux) => `${aux.name}×${aux.quantity}`,
-  ).join("、");
 
   const steps: CalculationStep[] = [
     {
@@ -295,10 +292,10 @@ export function calcOrderProfit(params: CalcProfitParams): OrderProfitResult {
     },
     {
       label: "材料成本",
-      formula: "增项材料成本（含免费部分）+ 固定辅材",
+      formula: "增项材料成本（含免费部分）+ 固定辅材（漏保盒）",
       details: [
         ...costLines,
-        `固定辅材（${fixedAuxText}）= ${formatMoney(fixedAuxCost)}`,
+        `固定辅材（漏保盒）= ${formatMoney(fixedAuxCost)}`,
         `= ${formatMoney(materialCost)}`,
       ],
       result: materialCost,

@@ -1,29 +1,19 @@
 /* ============================================================
- * 固定辅材逻辑层（任务v36）：漏保规格默认 / 材料库漏保价模糊匹配 / 固定辅材成本
+ * 固定辅材逻辑层（v36.2-P3）：漏保规格默认 / 成本表价格查询
  * 规范：业务逻辑收敛 src/lib；
- * 依赖铁则：本模块禁止 import storage（材料库由调用方读取后传入，
- *      与 costMapping.ts / finance.ts 同一规则，保证纯函数可测）
+ * 依赖铁则：本模块禁止 import storage（成本表由调用方读取后传入）
  * ============================================================ */
 
-import type { FixedAuxSelection, MaterialItemLib, Order } from "@/types";
-import {
-  findMaterialPrice,
-  DEFAULT_BREAKER_PRICE_MAP,
-  type MatLibEntry,
-} from "./costMapping";
+import type { FixedAuxSelection, Order } from "@/types";
+import { findCostSheetPrice } from "./costMapping";
+import type { CostSheetItem } from "@/types";
 
 /* ------------------------------------------------------------
- * 一、漏保规格与兜底常量
+ * 一、漏保规格档位
  * ------------------------------------------------------------ */
 
 /** 漏保规格档位（固定三档，FixedMaterialsDialog 下拉数据源） */
 export const BREAKER_SPECS = ["C25", "C40", "C40A"] as const;
-
-/** 漏保兜底价（元）：材料库模糊匹配不中时调用方使用，对齐 FIXED_AUX_MATERIALS 漏保开关 45 */
-export const FALLBACK_BREAKER_PRICE = 45;
-
-/** 扎带+胶带辅材包固定价（元）：沿用 FIXED_AUX_MATERIALS 第三项口径（×1 包） */
-export const TIE_TAPE_PACK_PRICE = 10;
 
 /** 金额保留两位小数（与 finance.round2 同口径，分位防浮点） */
 function round2(n: number): number {
@@ -44,47 +34,18 @@ export function defaultBreakerSpec(powerKw: number, brandName: string): string {
 }
 
 /* ------------------------------------------------------------
- * 三、材料库漏保价模糊匹配
+ * 三、成本表漏保价查询
  * ------------------------------------------------------------ */
 
 /**
- * 材料库模糊匹配漏保价（大小写不敏感），四级递退：
- * 1. findMaterialPrice(name, lib) 在材料库中模糊匹配
- * 2. 简单名称匹配在材料库中查找
- * 3. DEFAULT_BREAKER_PRICE_MAP[name]
- * 4. 全不中返回 null
- * 价格口径：成本价优先，无成本价用销售价。
+ * 从成本表查询漏保价（v36.2-P3：唯一对接成本表）
+ * 无命中返回 null（成本按 0 计）
  */
-export function findBreakerPrice(
+export function findBreakerPriceFromCostSheet(
   spec: string,
-  lib: MatLibEntry[],
+  costSheet: CostSheetItem[],
 ): number | null {
-  const specLower = spec.trim().toLowerCase();
-  if (!specLower) return null;
-
-  /* 1. 在材料库中模糊匹配 */
-  const matPrice = findMaterialPrice(spec, lib);
-  if (matPrice !== null) return matPrice;
-
-  /* 2. 简单名称匹配在材料库中查找 */
-  const simpleMatch = lib.find((m) =>
-    m.name.toLowerCase().includes(specLower) || specLower.includes(m.name.toLowerCase()),
-  );
-  if (simpleMatch) {
-    const cp = simpleMatch.costPrice;
-    const sp = simpleMatch.salePrice;
-    if (typeof cp === "number" && cp > 0) return cp;
-    if (typeof sp === "number" && sp > 0) return sp;
-  }
-
-  /* 3. 默认价格映射 */
-  const upperSpec = spec.toUpperCase();
-  if (upperSpec in DEFAULT_BREAKER_PRICE_MAP) {
-    return DEFAULT_BREAKER_PRICE_MAP[upperSpec];
-  }
-
-  /* 4. 全不中返回 null */
-  return null;
+  return findCostSheetPrice(`漏保 ${spec}`, costSheet);
 }
 
 /* ------------------------------------------------------------
@@ -92,20 +53,19 @@ export function findBreakerPrice(
  * ------------------------------------------------------------ */
 
 /**
- * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价查材料库。
- *
- * 均为 null→breakerPrice=null（由子窗口置空并提示去设置页材料库绑定）。
+ * 默认固定辅材选择：漏保规格按功率/品牌默认，漏保价查成本表。
+ * 无命中 → breakerPrice=null（由子窗口置空并提示去设置页成本表绑定）。
  * PVC 米数默认=用线米数。
- * 材料库由调用方读取后传入（本模块铁则不 import storage）。
+ * 成本表由调用方读取后传入（本模块铁则不 import storage）。
  */
 export function defaultFixedAux(
   order: Order,
   brandName: string,
   cableMeters: number,
-  lib: MatLibEntry[],
+  costSheet: CostSheetItem[],
 ): FixedAuxSelection {
   const breakerSpec = defaultBreakerSpec(order.powerKw, brandName);
-  const breakerPrice = findBreakerPrice(breakerSpec, lib);
+  const breakerPrice = findBreakerPriceFromCostSheet(breakerSpec, costSheet);
   return {
     breakerSpec,
     breakerPrice,
@@ -114,21 +74,22 @@ export function defaultFixedAux(
 }
 
 /* ------------------------------------------------------------
- * 五、固定辅材成本（V2：按快照取值源计算）
+ * 五、固定辅材成本（v36.2-P3：全部走成本表）
  * ------------------------------------------------------------ */
 
 /**
- * 固定辅材成本 = 漏保单价×1 + PVC米数×PVC单价 + 扎带+胶带辅材包 10
- * （扎带包沿用 FIXED_AUX_MATERIALS 第三项口径；结果 round2 分位防浮点；
- *  任务v36.1 FAIL-3：漏保价 null（未匹配）→ 漏保项计 0，不兜底乱价）
+ * 固定辅材成本 = 漏保单价×1 + PVC米数×PVC成本表单价 + 漏保盒成本表单价
+ * 无命中项按 0 计，结果 round2 分位防浮点
  */
 export function calcFixedAuxCostV2(
   sel: FixedAuxSelection,
-  pvcUnitPrice: number,
+  costSheet: CostSheetItem[],
 ): number {
+  const pvcUnitPrice = findCostSheetPrice("PVC管", costSheet) ?? 0;
+  const leakBoxPrice = findCostSheetPrice("漏保盒", costSheet) ?? 0;
   return round2(
     (sel.breakerPrice ?? 0) * 1 +
       sel.pvcMeters * pvcUnitPrice +
-      TIE_TAPE_PACK_PRICE,
+      leakBoxPrice,
   );
 }

@@ -663,8 +663,6 @@ export function getMaterialUsageSummary(orders: Order[]): {
   /* 配置一次读取：材料库（findMaterialPrice 取数）/ 领用记录 */
   const lib = loadMaterialsLib();
   const usageRecords = loadMaterialUsage();
-  loadMaterialsLib();
-
   const costSheet = loadCostSheet();
   const byName = new Map<
     string,
@@ -675,7 +673,7 @@ export function getMaterialUsageSummary(orders: Order[]): {
     for (const m of o.completion?.materials ?? []) {
       const entry = byName.get(m.name) ?? { name: m.name, quantity: 0, cost: 0 };
       entry.quantity += m.quantity;
-      entry.cost += ((findCostSheetPrice(m.name, costSheet) ?? findMaterialPrice(m.name, lib)) ?? 0) * m.quantity;
+      entry.cost += (findCostSheetPrice(m.name, costSheet) ?? 0) * m.quantity;
       byName.set(m.name, entry);
     }
   }
