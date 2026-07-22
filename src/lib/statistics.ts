@@ -26,7 +26,7 @@
  * 阶段3扩展（只增量加函数，不动已有签名；统计页展示接线由主控收口）：
  * - getUnpaidStats：未回款统计（无 payment 或 paid!==true 视为未回款）
  * - getPlatformStats：平台维度 单数+利润（逐单 calcOrderProfit，口径同 getMonthlyFinanceStats）
- * - getMaterialUsageSummary：完工物料按 name 聚合（成本走 queryCostPrice）+ cp_material_usage 领用合计
+ * - getMaterialUsageSummary：完工物料按 name 聚合（成本走 findCostSheetPrice / findMaterialPrice）+ cp_material_usage 领用合计
  * ============================================================ */
 
 import dayjs from "dayjs";
@@ -653,7 +653,7 @@ export function getPlatformStats(
 
 /**
  * 物料用量汇总（材料库口径）：完成单 completion.materials 按 name 聚合 数量/成本
- *（成本走 queryCostPrice，未命中 0），另附 cp_material_usage 领用记录的合计条数与总金额
+ *（成本走 findCostSheetPrice / findMaterialPrice，未命中 0），另附 cp_material_usage 领用记录的合计条数与总金额
  */
 export function getMaterialUsageSummary(orders: Order[]): {
   byMaterial: { name: string; quantity: number; cost: number }[];
