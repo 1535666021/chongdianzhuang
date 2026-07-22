@@ -12,7 +12,7 @@
  *     用新密码重加密的备份信封（localStorage 覆盖值）。
  * 解密顺序（与约定一致）：先试自定义密码信封（存在时），失败再试内置
  *   默认密码信封；两者均失败 → 明确报"密码不对"，禁止任何明文兜底。
- * 说明：信封 JSON 约 1MB，使用动态 import 独立分包，仅点击恢复时才加载。
+ * 说明：信封 JSON 约 1MB，放 public/legacy-backup.json 用 fetch 加载，避免 Vite 动态 import 哈希化导致 gh-pages 路径失效。
  * ------------------------------------------------------------ */
 import {
   clearCustomBackupPassword,
@@ -36,10 +36,14 @@ const WRONG_PASSWORD_MSG = "备份密码不对，请重试";
 
 /** 加载内置密文信封（动态 import 独立分包）；结构非法返回 null */
 async function loadBuiltInEnvelope(): Promise<BackupEnvelope | null> {
-  const mod = (await import("@/assets/legacy-backup.json")) as {
-    default: unknown;
-  };
-  return isBackupEnvelope(mod.default) ? mod.default : null;
+  try {
+    const res = await fetch("./legacy-backup.json");
+    if (!res.ok) return null;
+    const data = await res.json();
+    return isBackupEnvelope(data) ? data : null;
+  } catch {
+    return null;
+  }
 }
 
 /** 用给定密码解密指定信封并导入；密码不对返回 WRONG_PASSWORD_MSG */
