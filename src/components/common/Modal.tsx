@@ -15,9 +15,11 @@ export interface ModalProps {
   children: ReactNode;
   /** 底部按钮区（通常放 取消/确定） */
   footer?: ReactNode;
+  /** 自定义 z-index（可选，默认不覆盖） */
+  zIndex?: number;
 }
 
-export function Modal({ open, title, onClose, children, footer }: ModalProps) {
+export function Modal({ open, title, onClose, children, footer, zIndex }: ModalProps) {
   /* 打开时锁定背景滚动，关闭时恢复 */
   useEffect(() => {
     if (!open) return;
@@ -33,6 +35,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
   return createPortal(
     <div
       className="modal-mask anim-fade-in"
+      style={zIndex !== undefined ? { zIndex } : undefined}
       onClick={(e) => {
         // 点遮罩空白处关闭；点弹窗内部不触发
         if (e.target === e.currentTarget) onClose();

@@ -14,6 +14,7 @@ import {
 } from "@/lib/fixedAux";
 import { findCostSheetPrice } from "@/lib/costMapping";
 import { CostSheetPicker } from "@/components/CostSheetPicker";
+import { Modal } from "@/components/common/Modal";
 import type { CostSheetItem as CostSheetItemType } from "@/types";
 
 interface FixedMaterialsDialogProps {
@@ -112,87 +113,23 @@ export function FixedMaterialsDialog({
   const isBound = manuallyBound;
 
   return (
-    <div className="modal-mask" style={{ zIndex: 150 }} onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal__header">
-          <h3>固定辅材</h3>
-          <button
-            type="button"
-            className="modal__close"
-            onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}
-          >
-            <Icon name="x" size={20} />
-          </button>
-        </div>
-        <div className="modal__body">
-          {/* 漏保规格 */}
-          <div className="form-field">
-            <label className="form-field__label">漏保规格</label>
-            <div className="flex gap-2">
-              {BREAKER_SPECS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`btn ${spec === s ? "btn--primary" : ""}`}
-                  onClick={() => setSpec(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 漏保单价 */}
-          <div className="form-field">
-            <label className="form-field__label">
-              漏保单价（元，换规格自动匹配，可手改）
-            </label>
-            <input
-              className="input"
-              type="number"
-              placeholder="未匹配"
-              value={breakerPrice}
-              onChange={(e) => setBreakerPrice(e.target.value)}
-            />
-            {/* v36.2-P3：绑定状态基于成本表是否命中 */}
-            {isBound ? (
-              <span className="text-success text-sm">已绑定</span>
-            ) : (
-              <span
-                className="text-danger text-sm cursor-pointer"
-                onClick={() => setShowPicker(true)}
-              >
-                未绑定，点击选择成本条目
-              </span>
-            )}
-          </div>
-
-          {/* PVC 管米数 */}
-          <div className="form-field">
-            <label className="form-field__label">PVC 管（米）</label>
-            <input
-              className="input"
-              type="number"
-              value={pvcMeters}
-              onChange={(e) =>
-                setPvcMeters(Number(e.target.value) || 0)
-              }
-            />
-          </div>
-
-          {/* 漏保盒（v36.2-P3：原扎带+胶带辅材包改名） */}
-          <div className="form-field">
-            <label className="form-field__label">漏保盒</label>
-            <div className="text-tertiary">
-              成本表定价
-            </div>
-          </div>
-        </div>
-        <div className="modal__footer">
+    <Modal
+      open={!!open}
+      title="固定辅材"
+      onClose={() => {
+        if (onClose) onClose();
+        else if (onCancel) onCancel();
+      }}
+      zIndex={150}
+      footer={
+        <>
           <button
             type="button"
             className="btn"
-            onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}
+            onClick={() => {
+              if (onCancel) onCancel();
+              else if (onClose) onClose();
+            }}
           >
             取消
           </button>
@@ -203,6 +140,69 @@ export function FixedMaterialsDialog({
           >
             确认
           </button>
+        </>
+      }
+    >
+      {/* 漏保规格 */}
+      <div className="form-field">
+        <label className="form-field__label">漏保规格</label>
+        <div className="flex gap-2">
+          {BREAKER_SPECS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              className={`btn ${spec === s ? "btn--primary" : ""}`}
+              onClick={() => setSpec(s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 漏保单价 */}
+      <div className="form-field">
+        <label className="form-field__label">
+          漏保单价（元，换规格自动匹配，可手改）
+        </label>
+        <input
+          className="input"
+          type="number"
+          placeholder="未匹配"
+          value={breakerPrice}
+          onChange={(e) => setBreakerPrice(e.target.value)}
+        />
+        {/* v36.2-P3：绑定状态基于成本表是否命中 */}
+        {isBound ? (
+          <span className="text-success text-sm">已绑定</span>
+        ) : (
+          <span
+            className="text-danger text-sm cursor-pointer"
+            onClick={() => setShowPicker(true)}
+          >
+            未绑定，点击选择成本条目
+          </span>
+        )}
+      </div>
+
+      {/* PVC 管米数 */}
+      <div className="form-field">
+        <label className="form-field__label">PVC 管（米）</label>
+        <input
+          className="input"
+          type="number"
+          value={pvcMeters}
+          onChange={(e) =>
+            setPvcMeters(Number(e.target.value) || 0)
+          }
+        />
+      </div>
+
+      {/* 漏保盒（v36.2-P3：原扎带+胶带辅材包改名） */}
+      <div className="form-field">
+        <label className="form-field__label">漏保盒</label>
+        <div className="text-tertiary">
+          成本表定价
         </div>
       </div>
 
@@ -213,6 +213,6 @@ export function FixedMaterialsDialog({
           onClose={() => setShowPicker(false)}
         />
       )}
-    </div>
+    </Modal>
   );
 }
