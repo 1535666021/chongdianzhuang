@@ -39,7 +39,10 @@ export type IconName =
   | "arrow-left"
   | "ruler"
   | "file-text"
-  | "chevron-down";
+  | "chevron-down"
+  | "x"
+  | "check"
+  | "dollar-sign";
 
 /** 各图标的路径内容（描边属性统一由外层 <svg> 继承，此处只写几何） */
 const ICON_PATHS: Record<IconName, ReactNode> = {
@@ -253,6 +256,22 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   ),
   /* 下箭头（展开态，与 chevron-right 配对） */
   "chevron-down": <path d="m6 9 6 6 6-6" />,
+  /* 关闭（叉，与 close 同图，兼容旧写法） */
+  x: (
+    <>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </>
+  ),
+  /* 对勾 */
+  check: <path d="M20 6 9 17l-5-5" />,
+  /* 美元符号（成本价目表） */
+  "dollar-sign": (
+    <>
+      <path d="M12 1v22" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </>
+  ),
 };
 
 export interface IconProps {
