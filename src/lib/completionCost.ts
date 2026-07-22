@@ -1,19 +1,25 @@
 /* ============================================================
- * 完工成本 / 利润快照取数链（任务v36）
+ * 完工成本 / 利润快照取数链（任务v36 + v36.2-P2 扩展：成本结算统一走成本表）
  * 背景：finance.calcOrderProfit 锁定不可动，且对 v35.1「线缆敷设」行名
  *      双向 includes 均不中（客户费按总量全额错算、成本映射不中计 0）。
  *      本模块不走该链：完工时直接调用本模块算材料成本与利润快照，
  *      由调用方写入 completion.profitData（statistics 三级链吃快照不重算）。
  * 红线：与客户收费无关——电缆按总量全额进成本；
- * 依赖铁则：本模块禁止 import storage（成本映射/材料库由调用方读取后传入，
+ * 依赖铁则：本模块禁止 import storage（成本映射/材料库/成本表由调用方读取后传入，
  *      与 finance.ts / costMapping.ts 同一规则，保证纯函数可测）
  * ============================================================ */
 
 import type {
   FixedAuxSelection,
   MaterialItem,
+  CostSheetItem,
 } from "@/types";
-import { FIXED_AUX_MATERIALS, findMaterialPrice, type MatLibEntry } from "@/lib/costMapping";
+import {
+  FIXED_AUX_MATERIALS,
+  findMaterialPrice,
+  findCostSheetPrice,
+  type MatLibEntry,
+} from "@/lib/costMapping";
 import { calcMaterialCost } from "@/lib/finance";
 import { calcFixedAuxCostV2, TIE_TAPE_PACK_PRICE } from "@/lib/fixedAux";
 
@@ -40,8 +46,10 @@ export interface CompletionMaterialCostParams {
   materials: MaterialItem[];
   /** 电缆总量（米）：全额计成本，与客户是否超米收费无关 */
   cableTotalMeters: number;
-  /** 材料库（调用方 loadMaterialsLib() 读取后传入） */
+  /** 材料库（调用方 loadMaterialsLib() 读取后传入；v36.2-P2 后成本结算优先走 costSheet） */
   lib: MatLibEntry[];
+  /** 成本表（v36.2-P2 新增：成本结算统一走成本表；有值时优先查成本表，无值 fallback 材料库） */
+  costSheet?: CostSheetItem[];
   /** 固定辅材选择（Order.fixedAux 快照取值源；无值按 FIXED_AUX_MATERIALS 原样一份） */
   fixedAux?: FixedAuxSelection;
 }
@@ -53,7 +61,7 @@ export interface FixedAuxItemsDetail {
   breakerSpec: string;
   /** 漏保行显示文本：未匹配→「漏保 未绑定」，否则「漏保 规格」 */
   breakerLabel: string;
-  /** 漏保单价（元；null=材料库未匹配→不计价） */
+  /** 漏保单价（元；null=材料库/成本表未匹配→不计价） */
   breakerUnitPrice: number | null;
   /** 漏保成本（元）= breakerPrice×1，未匹配计 0 */
   breakerCost: number;
@@ -73,7 +81,7 @@ export interface FixedAuxItemsDetail {
 export interface CompletionMaterialCostDetail {
   /** 合计 = cable + other + fixedAux（分位防浮点） */
   total: number;
-  /** 电缆全额成本（cableTotalMeters × 映射"电缆"进价，未命中兜底 18） */
+  /** 电缆全额成本（cableTotalMeters × 成本表/材料库"电缆"进价） */
   cable: number;
   /** 固定辅材（fixedAux 快照按 V2 算 / 无值按 FIXED_AUX_MATERIALS 原样一份） */
   fixedAux: number;
@@ -85,18 +93,26 @@ export interface CompletionMaterialCostDetail {
 
 /**
  * 完工材料成本拆解 =
- *   电缆全额成本（cableTotalMeters × queryCostPrice("电缆")，未命中兜底 18）
+ *   电缆全额成本（cableTotalMeters × 查成本表/材料库"电缆"进价）
  * + 增项映射成本（非「线缆敷设」行，复用 finance.calcMaterialCost 口径）
- * + 固定辅材（fixedAux 有值→calcFixedAuxCostV2(sel, PVC映射价兜底 3.5)；
- *             无值→FIXED_AUX_MATERIALS 原样一份 76）
+ * + 固定辅材（fixedAux 有值→calcFixedAuxCostV2；无值→FIXED_AUX_MATERIALS）
  */
 export function calcCompletionMaterialCostDetail(
   params: CompletionMaterialCostParams,
 ): CompletionMaterialCostDetail {
-  const { materials, cableTotalMeters, lib, fixedAux } = params;
+  const { materials, cableTotalMeters, lib, costSheet, fixedAux } = params;
+
+  /* v36.2-P2：优先查成本表，无成本表 fallback 材料库 */
+  const findPrice = (name: string): number | null => {
+    if (costSheet && costSheet.length > 0) {
+      const cp = findCostSheetPrice(name, costSheet);
+      if (cp !== null) return cp;
+    }
+    return findMaterialPrice(name, lib);
+  };
 
   /* 1. 电缆全额成本（套包内也计成本，与客户收费口径无关） */
-  const cableUnitPrice = findMaterialPrice("电缆", lib) ?? 0;
+  const cableUnitPrice = findPrice("电缆") ?? 0;
   const cable = round2(cableTotalMeters * cableUnitPrice);
 
   /* 2. 非「线缆敷设」行的增项映射成本（未命中映射计 0，与 finance 同口径） */
@@ -106,7 +122,7 @@ export function calcCompletionMaterialCostDetail(
   const { total: otherCost } = calcMaterialCost(addonRows, lib);
 
   /* 3. 固定辅材：有快照取值源按 V2 算，无值按 FIXED_AUX_MATERIALS 原样一份 */
-  const pvcUnitPriceRaw = findMaterialPrice("PVC管", lib) ?? 0;
+  const pvcUnitPriceRaw = findPrice("PVC管") ?? 0;
   const auxCost = fixedAux
     ? calcFixedAuxCostV2(fixedAux, pvcUnitPriceRaw)
     : FIXED_AUX_MATERIALS.reduce(
