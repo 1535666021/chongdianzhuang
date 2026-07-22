@@ -88,7 +88,7 @@ export function FixedMaterialsDialog({
   };
 
   return (
-    <div className="dialog-overlay" onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
+    <div className="dialog-overlay" style={{ zIndex: 150 }} onClick={() => { if (onClose) onClose(); else if (onCancel) onCancel(); }}>
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog__header">
           <h3>固定辅材</h3>
