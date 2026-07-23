@@ -31,6 +31,7 @@ import { Icon } from "@/components/common/Icon";
 import type { IconName } from "@/components/common/Icon";
 import { Modal } from "@/components/common/Modal";
 import { StatusTag } from "@/components/common/StatusTag";
+import { OrderProfitDialog } from "@/components/OrderProfitDialog";
 import { ScriptDialog } from "@/components/ScriptDialog";
 import { TextPreviewDialog } from "@/components/TextPreviewDialog";
 import { findBrand } from "@/lib/brandMaterials";
@@ -163,6 +164,7 @@ export function OrderCard({
   const [originalOpen, setOriginalOpen] = useState(false);
   /* 平台选择弹层开关（任务v32 功能二：仅平台为"其他"时入口可点） */
   const [platformOpen, setPlatformOpen] = useState(false);
+  const [profitOpen, setProfitOpen] = useState(false);
   /* 水印名预览弹窗开关（任务v35：点击先弹预览可编辑，确认复制，不再直复制） */
   const [watermarkOpen, setWatermarkOpen] = useState(false);
 
@@ -394,7 +396,7 @@ export function OrderCard({
               showToast("已标记「已补桩」");
             }}
           >
-            需补桩
+            已补桩
           </span>
         ) : isInstall && order.restockStatus === "done" ? (
           <span
@@ -480,7 +482,11 @@ export function OrderCard({
           </span>
         ) : null}
         {order.completion ? (
-          <span className="flex-between gap-xs">
+          <span
+            className="flex-between gap-xs"
+            onClick={() => order.status === OrderStatus.Completed && setProfitOpen(true)}
+            style={{ cursor: order.status === OrderStatus.Completed ? "pointer" : undefined }}
+          >
             <Icon name="check-circle" size={16} className="text-tertiary" />
             <span className="flex-1 text-sm text-secondary">
               完工 {formatDate(order.completion.completeDate)} ·{" "}
@@ -662,6 +668,12 @@ export function OrderCard({
       >
         <pre className="shipment-preview">{originalText || order.remark}</pre>
       </Modal>
+
+      <OrderProfitDialog
+        open={profitOpen}
+        order={order}
+        onClose={() => setProfitOpen(false)}
+      />
     </div>
   );
 }
