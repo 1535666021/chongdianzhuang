@@ -14,6 +14,7 @@ import type {
   CostSheetItem,
 } from "@/types";
 import { findCostSheetPrice } from "@/lib/costMapping";
+import { addonShortNameOf } from "@/lib/addonShortName";
 import { calcMaterialCost } from "@/lib/finance";
 import { calcFixedAuxCostV2 } from "@/lib/fixedAux";
 import { getGlobalBinding } from "@/lib/globalMaterialConfig";
@@ -45,6 +46,8 @@ export interface CompletionMaterialCostParams {
   costSheet: CostSheetItem[];
   /** 固定辅材选择（Order.fixedAux 快照取值源；无值按成本表默认一份） */
   fixedAux?: FixedAuxSelection;
+  /** 增项材料成本绑定（P13：手动绑定的成本价，key=增项名称） */
+  addonCostBindings?: Record<string, number>;
 }
 
 /** 固定辅材逐项成本拆解（v36.2-P3：三行拆分——漏保/PVC管/漏保盒） */
@@ -72,6 +75,21 @@ export interface FixedAuxItemsDetail {
 }
 
 /** 材料成本拆解（v36.1 FAIL-5：预估到手可溯源，电缆/固定辅材/其他三类必拆） */
+export interface AddonCostItem {
+  /** 增项名称（原始全称） */
+  name: string;
+  /** 短名（展示用） */
+  shortName: string;
+  /** 数量 */
+  quantity: number;
+  /** 单位 */
+  unit: string;
+  /** 成本单价（元；null=未绑定） */
+  unitPrice: number | null;
+  /** 成本总价（元） */
+  total: number;
+}
+
 export interface CompletionMaterialCostDetail {
   /** 合计 = cable + other + fixedAux（分位防浮点） */
   total: number;
@@ -83,6 +101,8 @@ export interface CompletionMaterialCostDetail {
   fixedAuxItems?: FixedAuxItemsDetail;
   /** 其他增项映射成本（非「线缆敷设」行，finance.calcMaterialCost 口径） */
   other: number;
+  /** 增项逐项成本明细（P13：每增项一行，展示层逐项渲染） */
+  addonItems?: AddonCostItem[];
 }
 
 /**
@@ -95,7 +115,7 @@ export interface CompletionMaterialCostDetail {
 export function calcCompletionMaterialCostDetail(
   params: CompletionMaterialCostParams,
 ): CompletionMaterialCostDetail {
-  const { materials, cableTotalMeters, costSheet, fixedAux } = params;
+  const { materials, cableTotalMeters, costSheet, fixedAux, addonCostBindings } = params;
 
   /* v36.2-P3：唯一对接成本表 */
   const findPrice = (name: string): number | null => {
@@ -106,11 +126,32 @@ export function calcCompletionMaterialCostDetail(
   const cableUnitPrice = findPrice("电缆") ?? 0;
   const cable = round2(cableTotalMeters * cableUnitPrice);
 
-  /* 2. 非「线缆敷设」行的增项映射成本（未命中映射计 0） */
+  /* 2. 非「线缆敷设」行的增项逐项成本（P13：逐项查成本表/绑定，逐项计算） */
   const addonRows = materials.filter(
     (m) => !m.name.includes(CABLE_TOTAL_ROW_NAME),
   );
-  const { total: otherCost } = calcMaterialCost(addonRows, [], costSheet);
+  const addonItems: AddonCostItem[] = [];
+  let otherCost = 0;
+  for (const item of addonRows) {
+    let price: number | null = null;
+    if (costSheet && costSheet.length > 0) {
+      price = findCostSheetPrice(item.name, costSheet);
+    }
+    /* P13：成本表未命中，尝试手动绑定 */
+    if (price === null && addonCostBindings) {
+      price = addonCostBindings[item.name] ?? null;
+    }
+    const total = price != null ? round2(price * item.quantity) : 0;
+    if (price != null) otherCost += total;
+    addonItems.push({
+      name: item.name,
+      shortName: addonShortNameOf(item),
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice: price,
+      total,
+    });
+  }
 
   /* 3. 固定辅材：有快照取值源按 V2 算，无值按成本表默认一份 */
   const pvcUnitPriceRaw = findPrice("PVC管") ?? 0;
@@ -169,6 +210,7 @@ export function calcCompletionMaterialCostDetail(
     fixedAux: round2(auxCost),
     fixedAuxItems,
     other: round2(otherCost),
+    addonItems,
   };
 }
 
