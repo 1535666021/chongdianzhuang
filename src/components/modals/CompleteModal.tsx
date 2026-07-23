@@ -697,7 +697,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                 {/* 任务v36.2-P3：固定辅材拆三行（漏保/PVC管/漏保盒），三项和=总额 */}
                 <div>
                   材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
-                  （电缆{completionCalc.materialBreakdown.cable > 0
+                  （电缆{order.fixedAux?.cablePrice != null
                     ? (
                       <span
                         className="text-success cursor-pointer"
@@ -754,7 +754,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     </div>
                     <div>
                       PVC管 {completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}米{" "}
-                      {completionCalc.materialBreakdown.fixedAuxItems.pvcCost > 0
+                      {order.fixedAux?.pvcPrice != null
                         ? (
                           <span
                             className="text-success cursor-pointer"
