@@ -248,6 +248,8 @@ export interface Order {
   payment?: PaymentInfo;
   /** 固定辅材选择（任务v36：完工快照算成本时的取值源，FixedMaterialsDialog 录入，可选） */
   fixedAux?: FixedAuxSelection;
+  /** 增项材料成本绑定（P13：增项列表每项的成本价，key=增项名称，value=成本单价） */
+  addonCostBindings?: Record<string, number>;
   /** 回收站删除时间（ISO 字符串，status=trash 时存在） */
   deletedAt?: string;
   /** v7 扩展字段原样保留容器（freeCableMeters/serviceType 等，有值才写） */
