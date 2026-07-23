@@ -62,9 +62,9 @@ export function CostSheetSection() {
   };
 
   const saveEdit = () => {
-    if (!editing || !draft.name || draft.name.trim() === "" || draft.costPrice == null) {
+    if (!editing || !draft.name || draft.name?.trim() === "" || draft.costPrice == null) {
       // 修复：空名称时提示，不静默失败
-      if (!draft.name || draft.name.trim() === "") {
+      if (!draft.name || draft.name?.trim() === "") {
         alert("请输入材料名称");
         nameInputRef.current?.focus();
       }
@@ -75,7 +75,7 @@ export function CostSheetSection() {
         i.id === editing
           ? {
               ...i,
-              name: draft.name.trim(),
+              name: draft.name?.trim() || "",
               unit: draft.unit || "米",
               costPrice: Number(draft.costPrice) || 0,
             }
@@ -90,7 +90,7 @@ export function CostSheetSection() {
     // 修复：取消编辑时，如果是空名称的新项，直接删除
     if (editing) {
       const item = items.find((i) => i.id === editing);
-      if (item && item.name.trim() === "") {
+      if (item && item.name?.trim() === "") {
         persist(items.filter((i) => i.id !== editing));
       }
     }
