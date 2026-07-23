@@ -46,7 +46,7 @@ export function saveGlobalMaterialConfig(config: GlobalMaterialConfig): void {
 
 /** 获取指定材料的全局绑定 */
 export function getGlobalBinding(
-  materialName: "电缆" | "PVC管" | "漏保" | "漏保盒"
+  materialName: string
 ): MaterialBinding | undefined {
   const config = loadGlobalMaterialConfig();
   const key =
@@ -62,7 +62,7 @@ export function getGlobalBinding(
 
 /** 设置指定材料的全局绑定 */
 export function setGlobalBinding(
-  materialName: "电缆" | "PVC管" | "漏保" | "漏保盒",
+  materialName: string,
   binding: MaterialBinding | undefined
 ): void {
   const config = loadGlobalMaterialConfig();
