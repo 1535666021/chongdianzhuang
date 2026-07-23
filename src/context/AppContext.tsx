@@ -225,6 +225,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const updateOrderField = useCallback((id: string, field: string, value: unknown) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, [field]: value, updatedAt: nowIso() } : o,
+      ),
+    );
+  }, []);
+
   /* 回收站机制：删除 = 软删（status→Trash + deletedAt 记录删除时间，
    * 原状态暂存 legacyExtra.status 供恢复还原；物理删除走 purgeOrder） */
   /* 任务E：桩库存钩子——带桩订单完工-1、完成单删除回库+1、恢复完成单-1。
