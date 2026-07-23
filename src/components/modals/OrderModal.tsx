@@ -177,7 +177,7 @@ export function OrderModal({ open, order, onClose }: OrderModalProps) {
         <div className="p-md">
           <label className="label">订单文本（粘贴后一键解析保存）</label>
           <textarea
-            className="textarea"
+            className="textarea textarea--lg"
             value={parseText}
             maxLength={50000}
             placeholder={
