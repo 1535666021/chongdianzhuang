@@ -235,6 +235,17 @@ export function HomePage({ onNavigate }: HomePageProps) {
     return counts;
   }, [activeOrders]);
 
+  /* 当月已完成单数（首页 stat-mini 已完成项显示当月口径） */
+  const monthlyCompletedCount = useMemo(() => {
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return activeOrders.filter(
+      (o) =>
+        o.status === OrderStatus.Completed &&
+        o.completion?.completeDate?.startsWith(yearMonth)
+    ).length;
+  }, [activeOrders]);
+
   /* 回显用：已选品牌名（id → 名称，找不到兜底原 id） */
   const selectedBrandName = useMemo(
     () => brands.find((b) => b.id === filter.brandId)?.name ?? filter.brandId,
@@ -413,7 +424,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
               onClick={() => toggleStatusQuick(status)}
             >
               <span className="stat-mini__value">
-                {statusCounts.get(status) ?? 0}
+                {status === OrderStatus.Completed
+                  ? monthlyCompletedCount
+                  : (statusCounts.get(status) ?? 0)}
               </span>
               <span className="stat-mini__label">
                 {ORDER_STATUS_LABEL[status]}
