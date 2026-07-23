@@ -36,9 +36,11 @@ export function CostSheetPicker({
     setItems(loadCostSheet());
   }, []);
 
-  const filtered = items.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = items.filter((i) => {
+    const itemName = i.name.toLowerCase();
+    const searchTerm = search.toLowerCase();
+    return itemName.includes(searchTerm) || searchTerm.includes(itemName);
+  });
 
   const handleSelect = (item: CostSheetItem) => {
     onSelect(item);
