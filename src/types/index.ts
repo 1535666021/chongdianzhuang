@@ -190,10 +190,18 @@ export interface FixedAuxSelection {
   /** 漏保单价（元；null=材料库未匹配——价格框置空并提示去设置页成本表绑定，
    *  成本计算按 0 计，严禁自动填兜底数（任务v36.1 FAIL-3）） */
   breakerPrice: number | null;
+  /** 漏保绑定的成本表条目名称（v36.2-P10：用于回显绑定关系） */
+  breakerBoundName?: string | null;
   /** PVC 管米数（默认=用线米数，桥架混用场景可手改） */
   pvcMeters: number;
+  /** 电缆单价（元；null=未绑定，v36.2-P10 新增） */
+  cablePrice?: number | null;
+  /** 电缆绑定的成本表条目名称（v36.2-P10） */
+  cableBoundName?: string | null;
   /** 漏保盒单价（元；null=成本表未匹配，成本按 0 计） */
   leakBoxPrice?: number | null;
+  /** 漏保盒绑定的成本表条目名称（v36.2-P10） */
+  leakBoxBoundName?: string | null;
 }
 
 export interface Order {
