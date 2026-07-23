@@ -40,6 +40,11 @@ import {
   loadRestockEvaluated,
   saveRestockEvaluated,
 } from "@/lib/storage";
+import {
+  loadDropdownOptions,
+  addOrderToOptions,
+  saveDropdownOptions,
+} from "@/lib/dropdownOptions";
 import { adjustStock } from "@/lib/inventory";
 import {
   isInstallOrder,
@@ -105,6 +110,7 @@ export interface AppContextValue {
   /* ---- 平台（任务v32 功能二） ---- */
   /** 单字段更新订单平台（平台标签手选持久化；originalText 不动） */
   updateOrderPlatform: (id: string, platform: string) => void;
+  updateOrderField: (id: string, field: string, value: unknown) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -545,6 +551,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateRestockStatus,
       markRestockDone,
       updateOrderPlatform,
+      updateOrderField,
     }),
     [
       orders,
@@ -571,6 +578,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateRestockStatus,
       markRestockDone,
       updateOrderPlatform,
+      updateOrderField,
     ],
   );
 
