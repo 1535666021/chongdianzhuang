@@ -220,10 +220,10 @@ img {
 }
 
 .page-body {
-  padding: var(--space-lg);
+  padding: var(--space-xl);
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 /* 页面顶部标题栏 */
@@ -441,7 +441,7 @@ img {
 .select {
   width: 100%;
   min-height: var(--touch-target-min);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-surface);
@@ -461,7 +461,7 @@ img {
 }
 
 .textarea {
-  min-height: 88px;
+  min-height: 140px;
   resize: vertical;
   line-height: var(--line-height-normal);
 }
@@ -469,6 +469,14 @@ img {
 .input--error,
 .textarea--error {
   border-color: var(--color-danger);
+}
+
+/* 超大文本框（新增订单解析模式专用） */
+.textarea--lg {
+  min-height: 200px;
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
 }
 
 .form-item__error {
@@ -657,8 +665,8 @@ img {
   /* 横向铁规：任何视口下不超屏（375px 实测 = 375px） */
   max-width: min(var(--page-max-width), 100vw);
   /* 纵向铁规：100dvh 减去底部导航 + 底部安全区，任何手机不超屏 */
-  max-height: calc(100vh - var(--tab-bar-height) - var(--safe-area-bottom));
-  max-height: calc(100dvh - var(--tab-bar-height) - var(--safe-area-bottom));
+  max-height: calc(100vh - var(--safe-area-bottom));
+  max-height: calc(100dvh - var(--safe-area-bottom));
   background-color: var(--color-bg-surface);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: var(--shadow-modal);
@@ -703,10 +711,10 @@ img {
 .modal__body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-lg);
+  padding: var(--space-xl);
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
   -webkit-overflow-scrolling: touch;
 }
 
