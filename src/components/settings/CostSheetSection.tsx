@@ -124,13 +124,14 @@ export function CostSheetSection() {
             ref={editing === item.id ? newItemRef : undefined}
           >
             {editing === item.id ? (
-              <div className="flex gap-2 flex-1 items-center">
+              <div className="flex gap-2 flex-1 items-center" style={{ flexWrap: "wrap" }}>
                 <input
                   ref={nameInputRef}
-                  className="input input--sm flex-1"
+                  className="input input--sm"
                   placeholder="材料名称（必填）"
                   value={draft.name || ""}
                   autoFocus
+                  style={{ flex: "2 1 120px", minWidth: "100px", fontSize: "14px" }}
                   onChange={(e) =>
                     setDraft({ ...draft, name: e.target.value })
                   }
@@ -139,20 +140,22 @@ export function CostSheetSection() {
                   }}
                 />
                 <input
-                  className="input input--sm w-20"
+                  className="input input--sm"
                   placeholder="单位"
                   value={draft.unit || ""}
+                  style={{ width: "48px", textAlign: "center", fontSize: "14px" }}
                   onChange={(e) =>
                     setDraft({ ...draft, unit: e.target.value })
                   }
                 />
                 <input
-                  className="input input--sm w-24"
+                  className="input input--sm"
                   type="number"
                   inputMode="decimal"
                   min="0"
                   placeholder="成本价"
                   value={draft.costPrice ?? ""}
+                  style={{ width: "72px", fontSize: "14px" }}
                   onChange={(e) =>
                     setDraft({
                       ...draft,
@@ -167,6 +170,7 @@ export function CostSheetSection() {
                   type="button"
                   className="btn btn--primary btn--sm"
                   onClick={saveEdit}
+                  style={{ padding: "6px 10px", fontSize: "13px" }}
                 >
                   保存
                 </button>
@@ -174,6 +178,7 @@ export function CostSheetSection() {
                   type="button"
                   className="btn btn--sm"
                   onClick={cancelEdit}
+                  style={{ padding: "6px 10px", fontSize: "13px" }}
                 >
                   取消
                 </button>
