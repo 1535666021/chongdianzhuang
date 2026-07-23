@@ -270,7 +270,8 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
       cableTotalMeters:
         Number(actualCable) || Number(order.survey?.cableDistance) || 0,
     };
-  }, [open, order, materials, actualCable, actualReceivedInput]);
+  /* P13-fix1: addonCostBindings 变化时强制重新计算 */
+  }, [open, order, materials, actualCable, actualReceivedInput, JSON.stringify(order?.addonCostBindings ?? {})]);
 
   /* 增项下拉选项：与勘测页同一 getAddonOptions（契约§4，禁两份逻辑）；
    * 品牌名解析与 ScriptDialog 同口径（内置品牌 id → 品牌名，自定义品牌直接用名） */
@@ -733,6 +734,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                   <div key={item.name} style={{ paddingLeft: 16 }}>
                     {item.shortName} {item.quantity}{item.unit}{" "}
                     <CostBindField
+                      key={`${item.name}-${order.addonCostBindings?.[item.name] ?? 'unbound'}`}
                       materialName={item.name}
                       orderValue={order.addonCostBindings?.[item.name]}
                       quantity={item.quantity}
