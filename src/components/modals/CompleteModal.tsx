@@ -702,7 +702,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                   （电缆<CostBindField
                     materialName="电缆"
                     orderValue={order.fixedAux?.cablePrice}
-                    quantity={cableTotalMeters}
+                    quantity={completionCalc.cableTotalMeters}
                     onBind={(price, name) => {
                       updateOrder(order.id, {
                         ...order,
