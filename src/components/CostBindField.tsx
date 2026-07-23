@@ -15,7 +15,7 @@ import {
 import type { CostSheetItem } from "@/types";
 import { formatMoney } from "@/lib/utils";
 
-export type BindableMaterial = "电缆" | "PVC管" | "漏保" | "漏保盒";
+export type BindableMaterial = string; // P13：支持任意增项材料绑定
 
 interface CostBindFieldProps {
   /** 材料名称 */
@@ -42,9 +42,15 @@ export function CostBindField({
 }: CostBindFieldProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  const isFixedMaterial =
+    materialName === "电缆" ||
+    materialName === "PVC管" ||
+    materialName === "漏保" ||
+    materialName === "漏保盒";
+
   const globalBinding = useMemo(
-    () => getGlobalBinding(materialName),
-    [materialName, pickerOpen]
+    () => (isFixedMaterial ? getGlobalBinding(materialName) : undefined),
+    [materialName, pickerOpen, isFixedMaterial]
   );
 
   const isBound = orderValue != null || globalBinding != null;
