@@ -1,21 +1,18 @@
 /* ============================================================
- * 固定辅材弹窗子窗口（v36.2-P3：成本核算全面走成本表）
- * 功能：漏保规格选择 + PVC米数 + 成本表价格联动
+ * 固定辅材弹窗子窗口（v36.2-P10：三区域统一走 CostBindField 模块）
+ * 功能：漏保规格选择 + 漏保单价绑定 + 电缆绑定 + PVC米数 + 漏保盒绑定
  * 规范：业务逻辑收敛 src/lib，本组件只做渲染交互
  * ============================================================ */
 
 import { useState, useEffect } from "react";
-import { Icon } from "@/components/common/Icon";
+import { Modal } from "@/components/common/Modal";
+import { CostBindField } from "@/components/common/CostBindField";
 import { loadCostSheet } from "@/lib/storage";
 import type { FixedAuxSelection, Order, CostSheetItem } from "@/types";
 import {
   BREAKER_SPECS,
   findBreakerPriceFromCostSheet,
 } from "@/lib/fixedAux";
-import { findCostSheetPrice } from "@/lib/costMapping";
-import { CostSheetPicker } from "@/components/CostSheetPicker";
-import { Modal } from "@/components/common/Modal";
-import type { CostSheetItem as CostSheetItemType } from "@/types";
 
 interface FixedMaterialsDialogProps {
   open?: boolean;
@@ -41,77 +38,70 @@ export function FixedMaterialsDialog({
   onClose,
 }: FixedMaterialsDialogProps) {
   if (!open) return null;
-  const resolvedInit = init ?? order?.fixedAux ?? { breakerSpec: "C40", breakerPrice: null, pvcMeters: cableMeters };
+
+  const resolvedInit = init ?? order?.fixedAux ?? {
+    breakerSpec: "C40",
+    breakerPrice: null,
+    pvcMeters: cableMeters,
+    leakBoxPrice: null,
+  };
+
   const [spec, setSpec] = useState(resolvedInit.breakerSpec);
   const [breakerPrice, setBreakerPrice] = useState("");
+  const [breakerBoundName, setBreakerBoundName] = useState("");
   const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
-  const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
-  const [manuallyBound, setManuallyBound] = useState(false);
+  const [cablePrice, setCablePrice] = useState("");
+  const [cableBoundName, setCableBoundName] = useState("");
   const [leakBoxPrice, setLeakBoxPrice] = useState("");
-  const [leakBoxBound, setLeakBoxBound] = useState(false);
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerItems, setPickerItems] = useState<CostSheetItemType[]>([]);
+  const [leakBoxBoundName, setLeakBoxBoundName] = useState("");
+  const [costSheet, setCostSheet] = useState<CostSheetItem[]>([]);
 
   useEffect(() => {
     setCostSheet(loadCostSheet());
   }, []);
 
+  /* 初始化回填（含绑定名称） */
   useEffect(() => {
-    /* 任务v36.1 FAIL-3：未匹配价格=null → 价格框置空（严禁自动填兜底数） */
     const target = init ?? order?.fixedAux;
     if (!target) return;
-    setBreakerPrice(
-      target.breakerPrice != null ? String(target.breakerPrice) : "",
-    );
+    setBreakerPrice(target.breakerPrice != null ? String(target.breakerPrice) : "");
+    setBreakerBoundName(target.breakerBoundName ?? "");
     setSpec(target.breakerSpec);
     setPvcMeters(target.pvcMeters);
-    setLeakBoxPrice(
-      target.leakBoxPrice != null ? String(target.leakBoxPrice) : "",
-    );
-    /* v36.2-P3：判断绑定状态（成本表命中=已绑定） */
-    const costPrice = findCostSheetPrice(`漏保 ${target.breakerSpec}`, costSheet);
-    setManuallyBound(costPrice !== null);
-    const leakBoxCostPrice = findCostSheetPrice("漏保盒", costSheet);
-    setLeakBoxBound(leakBoxCostPrice !== null || target.leakBoxPrice != null);
-  }, [init, order?.fixedAux, costSheet]);
+    setCablePrice(target.cablePrice != null ? String(target.cablePrice) : "");
+    setCableBoundName(target.cableBoundName ?? "");
+    setLeakBoxPrice(target.leakBoxPrice != null ? String(target.leakBoxPrice) : "");
+    setLeakBoxBoundName(target.leakBoxBoundName ?? "");
+  }, [init, order?.fixedAux]);
 
-  /* 切换规格时重置手动绑定状态 */
+  /* 换规格：漏保价格联动查成本表 */
   useEffect(() => {
-    setManuallyBound(false);
-  }, [spec]);
-
-  /* 换规格：价格联动——查成本表（v36.2-P3 成本结算统一走成本表） */
-  useEffect(() => {
-    const costPrice = findCostSheetPrice(`漏保 ${spec}`, costSheet);
+    const costPrice = findBreakerPriceFromCostSheet(spec, costSheet);
     if (costPrice !== null) {
       setBreakerPrice(String(costPrice));
-      setManuallyBound(true);
+      setBreakerBoundName(`漏保 ${spec}`);
     }
-    /* 成本表未命中：不自动填充，保留当前值（init传入或用户手改） */
   }, [spec, costSheet]);
 
   const handleConfirm = () => {
-    /* 空框=未匹配（null），成本按 0 计；不兜底 */
     const sel: FixedAuxSelection = {
       breakerSpec: spec,
-      breakerPrice:
-        breakerPrice.trim() === "" ? null : Number(breakerPrice),
+      breakerPrice: breakerPrice.trim() === "" ? null : Number(breakerPrice),
+      breakerBoundName: breakerBoundName || null,
       pvcMeters,
-      leakBoxPrice:
-        leakBoxPrice.trim() === "" ? null : Number(leakBoxPrice),
+      cablePrice: cablePrice.trim() === "" ? null : Number(cablePrice),
+      cableBoundName: cableBoundName || null,
+      leakBoxPrice: leakBoxPrice.trim() === "" ? null : Number(leakBoxPrice),
+      leakBoxBoundName: leakBoxBoundName || null,
     };
     if (onSave) onSave(sel);
     else if (onConfirm) onConfirm(sel);
   };
 
-  const handleSelectFromPicker = (item: CostSheetItemType) => {
-    setBreakerPrice(String(item.costPrice));
-    setManuallyBound(true);
-    setShowPicker(false);
-  };
-
-  /* 绑定状态：成本表命中或用户手动选择后 */
-  const isBound = manuallyBound;
+  /* 绑定状态判定：有价格且有名=已绑定 */
+  const isBreakerBound = breakerPrice !== "" && breakerBoundName !== "";
+  const isCableBound = cablePrice !== "" && cableBoundName !== "";
+  const isLeakBoxBound = leakBoxPrice !== "" && leakBoxBoundName !== "";
 
   return (
     <Modal
@@ -161,36 +151,19 @@ export function FixedMaterialsDialog({
         </div>
       </div>
 
-      {/* 漏保单价 */}
-      <div className="form-field">
-        <label className="form-field__label">
-          漏保单价（元，换规格自动匹配，可手改）
-        </label>
-        <input
-          className="input"
-          type="number"
-          placeholder="未匹配"
-          value={breakerPrice}
-          onChange={(e) => setBreakerPrice(e.target.value)}
-        />
-        {/* v36.2-P3：绑定状态基于成本表是否命中 */}
-        {isBound ? (
-          <span className="text-success text-sm">已绑定</span>
-        ) : (
-          <span
-            className="text-danger text-sm cursor-pointer"
-            onClick={() => {
-              const items = loadCostSheet().filter(
-                (it) => it.name === `漏保 ${spec}`,
-              );
-              setPickerItems(items);
-              setShowPicker(true);
-            }}
-          >
-            未绑定，点击选择成本条目
-          </span>
-        )}
-      </div>
+      {/* 漏保单价 —— CostBindField 模块 */}
+      <CostBindField
+        label="漏保单价（元，换规格自动匹配，可手改）"
+        price={breakerPrice}
+        boundName={breakerBoundName}
+        isBound={isBreakerBound}
+        onPriceChange={setBreakerPrice}
+        onBoundNameChange={setBreakerBoundName}
+        onBind={(item) => {
+          setBreakerPrice(String(item.costPrice));
+          setBreakerBoundName(item.name);
+        }}
+      />
 
       {/* PVC 管米数 */}
       <div className="form-field">
@@ -199,48 +172,37 @@ export function FixedMaterialsDialog({
           className="input"
           type="number"
           value={pvcMeters}
-          onChange={(e) =>
-            setPvcMeters(Number(e.target.value) || 0)
-          }
+          onChange={(e) => setPvcMeters(Number(e.target.value) || 0)}
         />
       </div>
 
-      {/* 漏保盒（v36.2-P3：原扎带+胶带辅材包改名） */}
-      <div className="form-field">
-        <label className="form-field__label">漏保盒</label>
-        <div className="text-tertiary">
-          成本表定价
-        </div>
-      </div>
+      {/* 电缆 —— CostBindField 模块（v36.2-P10 新增） */}
+      <CostBindField
+        label="电缆（元/米，查成本表绑定）"
+        price={cablePrice}
+        boundName={cableBoundName}
+        isBound={isCableBound}
+        onPriceChange={setCablePrice}
+        onBoundNameChange={setCableBoundName}
+        onBind={(item) => {
+          setCablePrice(String(item.costPrice));
+          setCableBoundName(item.name);
+        }}
+      />
 
-      {showPicker && (
-        <div className="form-field">
-          <label className="form-field__label">选择成本条目</label>
-          {pickerItems.length === 0 ? (
-            <div className="text-tertiary">暂无匹配条目</div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {pickerItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="btn btn--outline text-left"
-                  onClick={() => handleSelectFromPicker(item)}
-                >
-                  {item.name} — {item.costPrice}元/{item.unit}
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn btn--sm mt-2"
-            onClick={() => setShowPicker(false)}
-          >
-            收起
-          </button>
-        </div>
-      )}
+      {/* 漏保盒 —— CostBindField 模块（v36.2-P10 改造） */}
+      <CostBindField
+        label="漏保盒（元，查成本表绑定）"
+        price={leakBoxPrice}
+        boundName={leakBoxBoundName}
+        isBound={isLeakBoxBound}
+        onPriceChange={setLeakBoxPrice}
+        onBoundNameChange={setLeakBoxBoundName}
+        onBind={(item) => {
+          setLeakBoxPrice(String(item.costPrice));
+          setLeakBoxBoundName(item.name);
+        }}
+      />
     </Modal>
   );
 }
