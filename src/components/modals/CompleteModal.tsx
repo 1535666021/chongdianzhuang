@@ -266,6 +266,8 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
       materialCost,
       materialBreakdown,
       profitData,
+      cableTotalMeters:
+        Number(actualCable) || Number(order.survey?.cableDistance) || 0,
     };
   }, [open, order, materials, actualCable, actualReceivedInput]);
 
