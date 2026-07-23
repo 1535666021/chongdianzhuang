@@ -50,6 +50,8 @@ export function FixedMaterialsDialog({
   const [breakerPrice, setBreakerPrice] = useState("");
   const [breakerBoundName, setBreakerBoundName] = useState("");
   const [pvcMeters, setPvcMeters] = useState(resolvedInit.pvcMeters);
+  const [pvcPrice, setPvcPrice] = useState("");
+  const [pvcBoundName, setPvcBoundName] = useState("");
   const [cablePrice, setCablePrice] = useState("");
   const [cableBoundName, setCableBoundName] = useState("");
   const [leakBoxPrice, setLeakBoxPrice] = useState("");
@@ -68,6 +70,8 @@ export function FixedMaterialsDialog({
     setBreakerBoundName(target.breakerBoundName ?? "");
     setSpec(target.breakerSpec);
     setPvcMeters(target.pvcMeters);
+    setPvcPrice(target.pvcPrice != null ? String(target.pvcPrice) : "");
+    setPvcBoundName(target.pvcBoundName ?? "");
     setCablePrice(target.cablePrice != null ? String(target.cablePrice) : "");
     setCableBoundName(target.cableBoundName ?? "");
     setLeakBoxPrice(target.leakBoxPrice != null ? String(target.leakBoxPrice) : "");
@@ -89,6 +93,8 @@ export function FixedMaterialsDialog({
       breakerPrice: breakerPrice.trim() === "" ? null : Number(breakerPrice),
       breakerBoundName: breakerBoundName || null,
       pvcMeters,
+      pvcPrice: pvcPrice.trim() === "" ? null : Number(pvcPrice),
+      pvcBoundName: pvcBoundName || null,
       cablePrice: cablePrice.trim() === "" ? null : Number(cablePrice),
       cableBoundName: cableBoundName || null,
       leakBoxPrice: leakBoxPrice.trim() === "" ? null : Number(leakBoxPrice),
@@ -101,6 +107,7 @@ export function FixedMaterialsDialog({
   /* 绑定状态判定：有价格且有名=已绑定 */
   const isBreakerBound = breakerPrice !== "" && breakerBoundName !== "";
   const isCableBound = cablePrice !== "" && cableBoundName !== "";
+  const isPvcBound = pvcPrice !== "" && pvcBoundName !== "";
   const isLeakBoxBound = leakBoxPrice !== "" && leakBoxBoundName !== "";
 
   return (
@@ -165,16 +172,19 @@ export function FixedMaterialsDialog({
         }}
       />
 
-      {/* PVC 管米数 */}
-      <div className="form-field">
-        <label className="form-field__label">PVC 管（米）</label>
-        <input
-          className="input"
-          type="number"
-          value={pvcMeters}
-          onChange={(e) => setPvcMeters(Number(e.target.value) || 0)}
-        />
-      </div>
+      {/* PVC 管 —— CostBindField 模块（v36.2-P10 改造） */}
+      <CostBindField
+        label={`PVC管（用量 ${pvcMeters} 米）`}
+        price={pvcPrice}
+        boundName={pvcBoundName}
+        isBound={isPvcBound}
+        onPriceChange={setPvcPrice}
+        onBoundNameChange={setPvcBoundName}
+        onBind={(item) => {
+          setPvcPrice(String(item.costPrice));
+          setPvcBoundName(item.name);
+        }}
+      />
 
       {/* 电缆 —— CostBindField 模块（v36.2-P10 新增） */}
       <CostBindField
