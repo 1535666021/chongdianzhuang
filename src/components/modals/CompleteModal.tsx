@@ -702,6 +702,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                   （电缆<CostBindField
                     materialName="电缆"
                     orderValue={order.fixedAux?.cablePrice}
+                    quantity={cableTotalMeters}
                     onBind={(price, name) => {
                       updateOrder(order.id, {
                         ...order,
@@ -750,6 +751,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                       <CostBindField
                         materialName="PVC管"
                         orderValue={order.fixedAux?.pvcPrice}
+                        quantity={completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}
                         onBind={(price, name) => {
                           updateOrder(order.id, {
                             ...order,
@@ -769,7 +771,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                       />
                     </div>
                     <div>
-                      漏保盒 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.leakBoxCost)}
+                      漏保盒{" "}
                       <CostBindField
                         materialName="漏保盒"
                         orderValue={order.fixedAux?.leakBoxPrice}

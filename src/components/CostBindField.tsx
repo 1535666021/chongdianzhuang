@@ -22,6 +22,8 @@ interface CostBindFieldProps {
   materialName: BindableMaterial;
   /** 订单自己的绑定值（优先显示） */
   orderValue?: number | null;
+  /** 数量/米数（用于显示总价） */
+  quantity?: number;
   /** 绑定成功后回调（price, name） */
   onBind?: (price: number, name: string) => void;
   /** toast 函数 */
@@ -33,6 +35,7 @@ interface CostBindFieldProps {
 export function CostBindField({
   materialName,
   orderValue,
+  quantity,
   onBind,
   showToast,
   className = "",
@@ -46,6 +49,9 @@ export function CostBindField({
 
   const isBound = orderValue != null || globalBinding != null;
   const displayPrice = orderValue ?? globalBinding?.costPrice ?? null;
+  const totalPrice = quantity != null && displayPrice != null
+    ? Math.round(quantity * displayPrice * 100) / 100
+    : null;
 
   const handleSelect = (item: CostSheetItem) => {
     const binding = costSheetItemToBinding(item);
@@ -70,6 +76,11 @@ export function CostBindField({
           onClick={handleClick}
         >
           {displayPrice != null ? formatMoney(displayPrice) : "已绑定"}
+          {totalPrice != null && (
+            <span className="text-muted" style={{ marginLeft: 4, textDecoration: "none" }}>
+              (×{quantity}={formatMoney(totalPrice)})
+            </span>
+          )}
         </span>
       ) : (
         <span
