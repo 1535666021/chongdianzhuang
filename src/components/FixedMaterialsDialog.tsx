@@ -1,5 +1,5 @@
 /* ============================================================
- * 固定辅材弹窗子窗口（v36.2-P10：三区域统一走 CostBindField 模块）
+ * 固定辅材弹窗子窗口（v36.2-P12：三区域统一走 CostBindField 模块）
  * 功能：漏保规格选择 + 漏保单价绑定 + 电缆绑定 + PVC米数 + 漏保盒绑定
  * 规范：业务逻辑收敛 src/lib，本组件只做渲染交互
  * ============================================================ */
@@ -161,6 +161,7 @@ export function FixedMaterialsDialog({
       {/* 漏保单价 —— CostBindField 模块 */}
       <CostBindField
         label="漏保单价（元，换规格自动匹配，可手改）"
+        pickerName="漏保"
         price={breakerPrice}
         boundName={breakerBoundName}
         isBound={isBreakerBound}
@@ -175,6 +176,7 @@ export function FixedMaterialsDialog({
       {/* PVC 管 —— CostBindField 模块（v36.2-P10 改造） */}
       <CostBindField
         label={`PVC管（用量 ${pvcMeters} 米）`}
+        pickerName="PVC管"
         price={pvcPrice}
         boundName={pvcBoundName}
         isBound={isPvcBound}
@@ -189,6 +191,7 @@ export function FixedMaterialsDialog({
       {/* 电缆 —— CostBindField 模块（v36.2-P10 新增） */}
       <CostBindField
         label="电缆（元/米，查成本表绑定）"
+        pickerName="电缆"
         price={cablePrice}
         boundName={cableBoundName}
         isBound={isCableBound}
@@ -203,6 +206,7 @@ export function FixedMaterialsDialog({
       {/* 漏保盒 —— CostBindField 模块（v36.2-P10 改造） */}
       <CostBindField
         label="漏保盒（元，查成本表绑定）"
+        pickerName="漏保盒"
         price={leakBoxPrice}
         boundName={leakBoxBoundName}
         isBound={isLeakBoxBound}
