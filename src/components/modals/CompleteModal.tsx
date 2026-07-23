@@ -66,6 +66,7 @@ import {
   loadPlatformRates,
   loadPlatforms,
   loadRateConfigs,
+  loadCostBindings,
 } from "@/lib/storage";
 import { formatMoney, todayStr } from "@/lib/utils";
 import type { CompleteModalProps, MaterialItem, CostSheetItem } from "@/types";
@@ -178,8 +179,10 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
     }
     /* 任务v36：增项物料=勘测物料原样带出（一行不少、每行可改可删可补），
      * 不再做任何自动行重建/联动 */
+    const globalBindings = loadCostBindings();
     const initMaterials = (order.survey?.materials ?? []).map((item) => ({
       ...item,
+      cost: globalBindings[item.name] ?? item.cost ?? 0,
     }));
     setMaterials(initMaterials);
     /* 任务v36.1 FAIL-4：「增项费用」框打开即带应收合计（所见即所得、可改）——
@@ -444,114 +447,102 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
 
   return (
     <>
-    <Modal
-      open={open}
-      title={`登记完工 · ${order.customerName}`}
-      onClose={onClose}
-      footer={
-        <>
-          <button type="button" className="btn btn--outline" onClick={onClose}>
-            取消
-          </button>
-          <button
-            type="button"
-            className="btn btn--primary btn--lg"
-            onClick={handleSubmit}
+      <Modal
+        open={open}
+        title={`重新核算 · ${order.customerName}`}
+        onClose={onClose}
+        footer={null}
+      >
+        {/* ===== 【1】顶部概览栏 ===== */}
+        {completionCalc && (
+          <div
+            style={{
+              display: "flex",
+              borderBottom: "1px solid var(--color-border)",
+              padding: "16px 0",
+              marginBottom: "16px",
+            }}
           >
-            保存完工
-          </button>
-        </>
-      }
-    >
-      <FormField label="完工日期" required error={errors.completeDate}>
-        <input
-          className="input"
-          type="date"
-          value={completeDate}
-          onChange={(e) => setCompleteDate(e.target.value)}
-        />
-      </FormField>
-
-      <FormField label="安装师傅" required error={errors.installer}>
-        <input
-          className={errors.installer ? "input input--error" : "input"}
-          value={installer}
-          placeholder="默认带出预约师傅，可修改"
-          onChange={(e) => setInstaller(e.target.value)}
-        />
-      </FormField>
-
-      {/* ---- 增项物料：默认带出勘测清单（带出行即终态，一行不少）；下拉选择
-             （与勘测页同一 getAddonOptions），选中带出售单价为默认金额，
-             可增可删可改金额 ---- */}
-      <FormField label="实际使用物料（默认带出勘测清单，每行可改可删可补）">
-        <div className="flex-column gap-sm">
-          {materials.map((item, index) => (
-            <div key={index} className="card card--flat">
-              <div className="flex gap-sm">
-                <input
-                  className="input flex-1"
-                  placeholder="物料名称"
-                  value={item.name}
-                  onChange={(e) => patchMaterial(index, "name", e.target.value)}
-                />
-                {/* 任务v33 零跑单行金额（仅零跑单渲染；无单价=套包内不计价） */}
-                {leapmotorActive && (
-                  <span className="text-sm text-secondary">
-                    {item.unitPrice !== undefined
-                      ? `¥${leapmotorAddonLineAmount(item.unitPrice, item.quantity)}`
-                      : "套包内"}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  className="btn btn--danger-outline btn--sm"
-                  aria-label="删除物料"
-                  onClick={() => removeMaterial(index)}
-                >
-                  删
-                </button>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                客户付费
               </div>
-              <div className="flex gap-sm mt-sm">
-                <input
-                  className="input flex-1"
-                  placeholder="规格"
-                  value={item.spec}
-                  onChange={(e) => patchMaterial(index, "spec", e.target.value)}
-                />
-                <input
-                  className="input flex-1"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  placeholder="数量"
-                  value={String(item.quantity)}
-                  onChange={(e) =>
-                    patchMaterial(index, "quantity", e.target.value)
-                  }
-                />
-                <input
-                  className="input flex-1"
-                  placeholder="单位"
-                  value={item.unit}
-                  onChange={(e) => patchMaterial(index, "unit", e.target.value)}
-                />
-                <input
-                  className="input flex-1"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  placeholder="金额(元)"
-                  value={item.unitPrice != null ? String(item.unitPrice) : ""}
-                  onChange={(e) =>
-                    patchMaterial(index, "unitPrice", e.target.value)
-                  }
-                />
+              <div
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "bold",
+                  color: "var(--color-success)",
+                }}
+              >
+                ¥{formatMoney(completionCalc.actualReceived)}
               </div>
             </div>
-          ))}
-          {/* 任务v33 零跑增项模板下拉（仅零跑单渲染，位于现有品牌增项下拉上方）：
-              选中带出名称/单位/单价追加一行（数量默认1，行内可改），随后复位 */}
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                订单成本
+              </div>
+              <div
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "bold",
+                  color: "var(--color-danger)",
+                }}
+              >
+                ¥{formatMoney(completionCalc.materialCost + completionCalc.profitData.platformDeduction)}
+              </div>
+            </div>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                利润
+              </div>
+              <div
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "bold",
+                  color: "var(--color-success)",
+                }}
+              >
+                ¥{formatMoney(completionCalc.profitData.profit)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== 【2】【3】【4】【5】增项辅材区 ===== */}
+        <div style={{ marginBottom: "16px" }}>
+          {/* 标题栏 */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+            }}
+          >
+            <span style={{ fontSize: "16px", fontWeight: "bold" }}>增项辅材</span>
+            <span style={{ fontSize: "14px", color: "#ff6b35" }}>
+              客户超出付费：¥{formatMoney(completionCalc?.addonTotal ?? 0)}
+            </span>
+          </div>
+
+          {/* 添加按钮 */}
+          <select
+            className="input"
+            value={addonPick}
+            aria-label="选择辅材加入清单"
+            onChange={(e) => addAddon(e.target.value)}
+            style={{ marginBottom: "12px", width: "100%" }}
+          >
+            <option value="">+选择辅材添加...</option>
+            {addonOptions.map((option) => (
+              <option key={option.name} value={option.name}>
+                {option.name}（{option.unit}）¥{option.salePrice}
+                {option.usageCount > 0 ? ` · 用过${option.usageCount}次` : ""}
+              </option>
+            ))}
+          </select>
+
+          {/* 零跑模板下拉（保留） */}
           {leapmotorActive && (
             <select
               className="input"
@@ -574,6 +565,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                   },
                 ]);
               }}
+              style={{ marginBottom: "12px", width: "100%" }}
             >
               <option value="">从零跑模板选择添加…</option>
               {leapmotorTemplates.map((t) => (
@@ -583,37 +575,187 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
               ))}
             </select>
           )}
-          {/* 增项下拉：与勘测页完全一致（同一 getAddonOptions、同一交互），
-              选中即追加一行并带默认金额，随后复位 */}
-          <select
-            className="input"
-            value={addonPick}
-            aria-label="选择增项加入清单"
-            onChange={(e) => addAddon(e.target.value)}
-          >
-            <option value="">＋ 选择增项（按常用排序）…</option>
-            {addonOptions.map((option) => (
-              <option key={option.name} value={option.name}>
-                {option.name}（{option.unit}）¥{option.salePrice}
-                {option.usageCount > 0 ? ` · 用过${option.usageCount}次` : ""}
-              </option>
-            ))}
-          </select>
-          {/* 任务v33 零跑增项区底合计（仅零跑单渲染；只对带单价行计价） */}
+
+          {/* 增项列表 */}
+          {materials.length === 0 ? (
+            <div
+              style={{
+                padding: "24px",
+                textAlign: "center",
+                color: "var(--color-text-secondary)",
+                background: "var(--color-bg-secondary)",
+                borderRadius: "8px",
+              }}
+            >
+              暂无增项辅材
+            </div>
+          ) : (
+            materials.map((item, index) => (
+              <div
+                key={index}
+                style={{
+                  background: "var(--color-bg-base)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginBottom: "8px",
+                }}
+              >
+                {/* 名称行（长名称换行显示规格） */}
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    marginBottom: "8px",
+                    wordBreak: "break-all",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {item.name}
+                  {item.spec ? (
+                    <span
+                      style={{
+                        color: "var(--color-text-secondary)",
+                        fontSize: "13px",
+                      }}
+                    >
+                      （{item.spec}）
+                    </span>
+                  ) : null}
+                </div>
+                {/* 操作行 */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--color-text-secondary)",
+                      minWidth: "20px",
+                    }}
+                  >
+                    {item.unit}
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    className="input"
+                    style={{
+                      width: "56px",
+                      padding: "4px 8px",
+                      fontSize: "14px",
+                      background: "#fff",
+                    }}
+                    value={String(item.quantity)}
+                    onChange={(e) =>
+                      patchMaterial(index, "quantity", e.target.value)
+                    }
+                  />
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "#ff6b35",
+                      whiteSpace: "nowrap",
+                      fontWeight: 500,
+                    }}
+                  >
+                    超1成本
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    className="input"
+                    placeholder="元"
+                    style={{
+                      width: "64px",
+                      padding: "4px 8px",
+                      fontSize: "14px",
+                      background: "#fff",
+                    }}
+                    value={
+                      order.addonCostBindings?.[item.name] != null
+                        ? String(order.addonCostBindings[item.name])
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const price =
+                        e.target.value.trim() === ""
+                          ? 0
+                          : Number(e.target.value);
+                      updateOrder(order.id, {
+                        ...order,
+                        addonCostBindings: {
+                          ...(order.addonCostBindings ?? {}),
+                          [item.name]: Number.isFinite(price) ? price : 0,
+                        },
+                      });
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: "var(--color-text-primary)",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    =¥
+                    {formatMoney(
+                      (order.addonCostBindings?.[item.name] ?? 0) *
+                        item.quantity,
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeMaterial(index)}
+                    style={{
+                      marginLeft: "auto",
+                      color: "#ff4d4f",
+                      background: "none",
+                      border: "none",
+                      fontSize: "22px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      padding: "0 4px",
+                      lineHeight: 1,
+                    }}
+                    aria-label="删除"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* 零跑合计（保留） */}
           {leapmotorActive && (
-            <div className="text-sm text-secondary">
+            <div
+              style={{
+                fontSize: "13px",
+                color: "var(--color-text-secondary)",
+                marginTop: "8px",
+              }}
+            >
               增项合计 ¥{leapmotorAddonsTotal(materials)}
             </div>
           )}
-          {/* 任务v36 增项区底部：合计行（应收=addonTotalWithCable）+ 实收输入
-              +「固定辅材」次按钮（打开 FixedMaterialsDialog 子窗口） */}
-          <div className="flex-between text-sm">
-            <span className="text-secondary">增项合计（应收）</span>
-            <span className="text-bold">
-              {formatMoney(completionCalc?.addonTotal ?? 0)}
-            </span>
-          </div>
-          <div className="flex gap-sm">
+
+          {/* 实收输入 + 固定辅材按钮（保留） */}
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              marginTop: "12px",
+            }}
+          >
             <input
               className="input flex-1"
               type="number"
@@ -632,86 +774,175 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
               固定辅材
             </button>
           </div>
-        </div>
-      </FormField>
 
-      {completionCalc && (
-        <div className="card card--flat mt-sm">
-          <div className="flex-column gap-sm">
-            <div className="text-sm text-bold">成本核算</div>
-            <div className="flex-between text-sm">
-              <span className="text-secondary">客户增项应收</span>
-              <span>{formatMoney(completionCalc.addonTotal)}</span>
-            </div>
-            <div className="flex-between text-sm">
-              <span className="text-secondary">客户实收</span>
-              <span>{formatMoney(completionCalc.actualReceived)}</span>
-            </div>
-            <div className="flex-between text-sm">
-              <span className="text-secondary">
-                平台扣点（{rateToPercentText(completionCalc.platformRate)}%）
+          {/* 【5】增项合计 */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "12px",
+              paddingTop: "12px",
+              borderTop: "1px solid var(--color-border)",
+            }}
+          >
+            <span style={{ fontSize: "14px", fontWeight: 500 }}>
+              增项辅材成本合计
+            </span>
+            <span
+              style={{ fontSize: "16px", fontWeight: "bold", color: "#ff4d4f" }}
+            >
+              ¥
+              {formatMoney(
+                completionCalc?.materialBreakdown?.addonItems?.reduce(
+                  (sum, item) => sum + (item.total ?? 0),
+                  0,
+                ) ?? 0,
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* ===== 【6】【7】计算明细卡片（绿底圆角） ===== */}
+        {completionCalc && (
+          <div
+            style={{
+              background: "#e8f5e9",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "16px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "8px",
+                fontSize: "14px",
+              }}
+            >
+              <span>
+                客户付费×
+                {String((1 - completionCalc.platformRate).toFixed(1))}
               </span>
               <span>
-                -{" "}
+                = ¥
                 {formatMoney(
-                  Math.abs(completionCalc.profitData.platformDeduction),
+                  completionCalc.actualReceived *
+                    (1 - completionCalc.platformRate),
                 )}
               </span>
             </div>
-            {/* 任务v36.2：固定辅材行可点击→弹出子窗口修改 */}
             <div
-              className="flex-between text-sm"
-              style={{ cursor: "pointer" }}
-              onClick={() => setFixedAuxOpen(true)}
-              title="点击修改固定辅材"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "8px",
+                fontSize: "14px",
+              }}
             >
-              <span className="text-secondary">材料成本（含固定辅材）</span>
-              <span>- {formatMoney(Math.abs(completionCalc.materialCost))}</span>
-            </div>
-            <div className="flex-between text-sm">
-              <span className="text-secondary">服务费（按服务类型）</span>
-              <span>+ {formatMoney(completionCalc.serviceFee)}</span>
-            </div>
-            <div className="flex-between">
-              <span className="text-sm text-bold">预估到手</span>
-              <span className="text-lg text-bold text-primary-color">
-                {formatMoney(completionCalc.profitData.profit)}
+              <span>结算费</span>
+              <span>
+                ¥
+                {formatMoney(
+                  completionCalc.actualReceived -
+                    completionCalc.profitData.platformDeduction,
+                )}
               </span>
             </div>
-            {/* 任务v36.1 FAIL-5：预估到手可溯源——计算明细可展开，
-                材料成本三拆（电缆/固定辅材/其他），负数一眼定位科目 */}
-            <button
-              type="button"
-              className="btn btn--outline btn--sm"
-              onClick={() => setShowCostDetail((v) => !v)}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#ff4d4f",
+              }}
             >
-              {showCostDetail ? "收起明细" : "计算明细"}
-            </button>
-            {showCostDetail ? (
-              <div className="flex-column gap-xs text-sm text-secondary">
-                <div>服务费 +{formatMoney(completionCalc.serviceFee)}</div>
-                <div>
-                  增项费 +{formatMoney(completionCalc.actualReceived)}
-                  （实收口径）
-                </div>
-                <div>
-                  平台扣点 −
-                  {formatMoney(
-                    Math.abs(completionCalc.profitData.platformDeduction),
-                  )}
-                </div>
-                {/* P13：材料成本逐项列（增项列表有几行，明细列几行） */}
-                <div>
-                  材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
-                </div>
-                {/* 电缆行 */}
-                <div style={{ paddingLeft: 16 }}>
-                  线缆敷设 {completionCalc.cableTotalMeters}米{" "}
-                  <CostBindField
-                    materialName="电缆"
-                    orderValue={order.fixedAux?.cablePrice}
-                    quantity={completionCalc.cableTotalMeters}
-                    onBind={(price, name) => {
+              <span>增项辅材成本</span>
+              <span>
+                -¥
+                {formatMoney(
+                  completionCalc.materialBreakdown.addonItems?.reduce(
+                    (sum, item) => sum + (item.total ?? 0),
+                    0,
+                  ) ?? 0,
+                )}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "12px",
+                fontSize: "14px",
+                color: "#ff4d4f",
+                fontWeight: "bold",
+              }}
+            >
+              <span>总成本</span>
+              <span>
+                -¥
+                {formatMoney(
+                  completionCalc.materialCost +
+                    completionCalc.profitData.platformDeduction,
+                )}
+              </span>
+            </div>
+
+            {/* 成本分项明细 */}
+            <div
+              style={{
+                borderTop: "1px dashed #a5d6a7",
+                paddingTop: "12px",
+              }}
+            >
+              {/* 线缆 */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                  fontSize: "13px",
+                  flexWrap: "wrap",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  线缆（电缆×{completionCalc.cableTotalMeters}米×
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    className="input"
+                    style={{
+                      width: "56px",
+                      padding: "2px 6px",
+                      fontSize: "13px",
+                      background: "#fff",
+                    }}
+                    value={
+                      order.fixedAux?.cablePrice != null
+                        ? String(order.fixedAux.cablePrice)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const price =
+                        e.target.value.trim() === ""
+                          ? null
+                          : Number(e.target.value);
                       updateOrder(order.id, {
                         ...order,
                         fixedAux: {
@@ -721,214 +952,306 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                             pvcMeters: 0,
                             leakBoxPrice: null,
                           }),
-                          cablePrice: price,
-                          cableBoundName: name,
+                          cablePrice: Number.isFinite(price) ? price : null,
                         },
                       });
                     }}
-                    showToast={showToast}
                   />
-                </div>
-                {/* 增项逐项成本（P13：每增项一行，名称/数量/成本价） */}
-                {completionCalc.materialBreakdown.addonItems?.map((item) => (
-                  <div key={item.name} style={{ paddingLeft: 16 }}>
-                    {item.shortName} {item.quantity}{item.unit}{" "}
-                    <CostBindField
-                      key={`${item.name}-${order.addonCostBindings?.[item.name] ?? 'unbound'}`}
-                      materialName={item.name}
-                      orderValue={order.addonCostBindings?.[item.name]}
-                      quantity={item.quantity}
-                      onBind={(price, name) => {
-                        updateOrder(order.id, {
-                          ...order,
-                          addonCostBindings: {
-                            ...(order.addonCostBindings ?? {}),
-                            [item.name]: price,
-                          },
-                        });
-                      }}
-                      showToast={showToast}
-                    />
-                    {item.unitPrice != null && item.quantity > 1
-                      ? ` (×${item.quantity}=${formatMoney(item.total)})`
-                      : ""}
-                  </div>
-                ))}
-                {completionCalc.materialBreakdown.fixedAuxItems ? (
-                  <div className="flex-column gap-xs" style={{ paddingLeft: 16 }}>
-                    <div>
-                      {completionCalc.materialBreakdown.fixedAuxItems.breakerLabel}
-                      <CostBindField
-                        materialName="漏保"
-                        orderValue={order.fixedAux?.breakerPrice}
-                        onBind={(price, name) => {
-                          updateOrder(order.id, {
-                            ...order,
-                            fixedAux: {
-                              ...(order.fixedAux ?? {
-                                breakerSpec: "C40",
-                                breakerPrice: null,
-                                pvcMeters: 0,
-                                leakBoxPrice: null,
-                              }),
-                              breakerPrice: price,
-                            },
-                          });
-                        }}
-                        showToast={showToast}
-                      />
-                    </div>
-                    <div>
-                      PVC管 {completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}米{" "}
-                      <CostBindField
-                        materialName="PVC管"
-                        orderValue={order.fixedAux?.pvcPrice}
-                        quantity={completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}
-                        onBind={(price, name) => {
-                          updateOrder(order.id, {
-                            ...order,
-                            fixedAux: {
-                              ...(order.fixedAux ?? {
-                                breakerSpec: "C40",
-                                breakerPrice: null,
-                                pvcMeters: 0,
-                                leakBoxPrice: null,
-                              }),
-                              pvcPrice: price,
-                              pvcBoundName: name,
-                            },
-                          });
-                        }}
-                        showToast={showToast}
-                      />
-                    </div>
-                    <div>
-                      漏保盒{" "}
-                      <CostBindField
-                        materialName="漏保盒"
-                        orderValue={order.fixedAux?.leakBoxPrice}
-                        onBind={(price, name) => {
-                          updateOrder(order.id, {
-                            ...order,
-                            fixedAux: {
-                              ...(order.fixedAux ?? {
-                                breakerSpec: "C40",
-                                breakerPrice: null,
-                                pvcMeters: 0,
-                                leakBoxPrice: null,
-                              }),
-                              leakBoxPrice: price,
-                            },
-                          });
-                        }}
-                        showToast={showToast}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                <div className="text-bold">
-                  = 预估到手 {formatMoney(completionCalc.profitData.profit)}
-                </div>
+                  元）
+                </span>
+                <span style={{ color: "#ff4d4f", whiteSpace: "nowrap" }}>
+                  = -¥
+                  {formatMoney(
+                    completionCalc.cableTotalMeters *
+                      (order.fixedAux?.cablePrice ?? 0),
+                  )}
+                </span>
               </div>
-            ) : null}
+              {/* PVC */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                  fontSize: "13px",
+                  flexWrap: "wrap",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  PVC（PVC×
+                  {completionCalc.materialBreakdown.fixedAuxItems
+                    ?.pvcMeters ?? 0}
+                  米×
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    className="input"
+                    style={{
+                      width: "56px",
+                      padding: "2px 6px",
+                      fontSize: "13px",
+                      background: "#fff",
+                    }}
+                    value={
+                      order.fixedAux?.pvcPrice != null
+                        ? String(order.fixedAux.pvcPrice)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const price =
+                        e.target.value.trim() === ""
+                          ? null
+                          : Number(e.target.value);
+                      updateOrder(order.id, {
+                        ...order,
+                        fixedAux: {
+                          ...(order.fixedAux ?? {
+                            breakerSpec: "C40",
+                            breakerPrice: null,
+                            pvcMeters: 0,
+                            leakBoxPrice: null,
+                          }),
+                          pvcPrice: Number.isFinite(price) ? price : null,
+                        },
+                      });
+                    }}
+                  />
+                  元）
+                </span>
+                <span style={{ color: "#ff4d4f", whiteSpace: "nowrap" }}>
+                  = -¥
+                  {formatMoney(
+                    (completionCalc.materialBreakdown.fixedAuxItems
+                      ?.pvcMeters ?? 0) *
+                      (order.fixedAux?.pvcPrice ?? 0),
+                  )}
+                </span>
+              </div>
+              {/* 漏保 */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                  fontSize: "13px",
+                  flexWrap: "wrap",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  漏保（{order.fixedAux?.breakerSpec ?? "C40"}×1个×
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    className="input"
+                    style={{
+                      width: "56px",
+                      padding: "2px 6px",
+                      fontSize: "13px",
+                      background: "#fff",
+                    }}
+                    value={
+                      order.fixedAux?.breakerPrice != null
+                        ? String(order.fixedAux.breakerPrice)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const price =
+                        e.target.value.trim() === ""
+                          ? null
+                          : Number(e.target.value);
+                      updateOrder(order.id, {
+                        ...order,
+                        fixedAux: {
+                          ...(order.fixedAux ?? {
+                            breakerSpec: "C40",
+                            breakerPrice: null,
+                            pvcMeters: 0,
+                            leakBoxPrice: null,
+                          }),
+                          breakerPrice: Number.isFinite(price)
+                            ? price
+                            : null,
+                        },
+                      });
+                    }}
+                  />
+                  元）
+                </span>
+                <span style={{ color: "#ff4d4f", whiteSpace: "nowrap" }}>
+                  = -¥{formatMoney(order.fixedAux?.breakerPrice ?? 0)}
+                </span>
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* ===== 保留字段（完工日期、安装师傅等） ===== */}
+        <div style={{ marginBottom: "16px" }}>
+          <FormField label="完工日期" required error={errors.completeDate}>
+            <input
+              className="input"
+              type="date"
+              value={completeDate}
+              onChange={(e) => setCompleteDate(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="安装师傅" required error={errors.installer}>
+            <input
+              className={
+                errors.installer ? "input input--error" : "input"
+              }
+              value={installer}
+              placeholder="默认带出预约师傅，可修改"
+              onChange={(e) => setInstaller(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="实际线缆用量（米，默认带出勘测距离）">
+            <input
+              className="input"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={actualCable}
+              placeholder="默认带出勘测距离，按实际修改"
+              onChange={(e) => setActualCable(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="增项费用（元，话术用，可选）">
+            <input
+              className="input"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={addonFee}
+              placeholder="客户增项付费合计"
+              onChange={(e) => setAddonFee(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="安装详情（默认带出勘测安装方式，可改）">
+            <input
+              className="input"
+              value={installDetail}
+              placeholder="如 壁挂安装，PVC敷设"
+              onChange={(e) => setInstallDetail(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="完工备注（默认带出勘测备注，可改）">
+            <textarea
+              className="textarea"
+              value={note}
+              placeholder="验收情况、遗留事项等"
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </FormField>
         </div>
-      )}
 
-      {/* 任务Q 话术变量可选字段：不强制，填了话术自动代入 */}
-      <FormField label="实际线缆用量（米，默认带出勘测距离；带出行即终态，改动不再重建增项行）">
-        <input
-          className="input"
-          type="number"
-          inputMode="decimal"
-          min="0"
-          value={actualCable}
-          placeholder="默认带出勘测距离，按实际修改"
-          onChange={(e) => setActualCable(e.target.value)}
-        />
-      </FormField>
+        {/* ===== 【8】保存按钮 ===== */}
+        <button
+          type="button"
+          className="btn btn--primary btn--lg"
+          onClick={handleSubmit}
+          style={{
+            width: "100%",
+            padding: "16px",
+            fontSize: "16px",
+            fontWeight: "bold",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            background: "var(--color-success)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+          }}
+        >
+          <span style={{ fontSize: "20px" }}>✓</span>
+          保存核算
+        </button>
+        <button
+          type="button"
+          className="btn btn--outline"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            padding: "12px",
+          }}
+        >
+          取消
+        </button>
+      </Modal>
 
-      <FormField label="增项费用（元，话术用，可选）">
-        <input
-          className="input"
-          type="number"
-          inputMode="decimal"
-          min="0"
-          value={addonFee}
-          placeholder="客户增项付费合计"
-          onChange={(e) => setAddonFee(e.target.value)}
-        />
-      </FormField>
+      {/* 安装完工话术弹窗（保留） */}
+      <ScriptDialog
+        open={scriptOpen}
+        order={order}
+        scene="installComplete"
+        extras={{
+          materialsText,
+          totalCostText: completionCalc
+            ? formatMoney(completionCalc.profitData.profit)
+            : "以实际为准",
+          installerName: installer.trim(),
+          completeDate,
+          installDetail: installDetail.trim(),
+          addonFee:
+            addonFee.trim() !== "" && Number.isFinite(Number(addonFee))
+              ? Number(addonFee)
+              : undefined,
+          actualCable:
+            actualCable.trim() !== "" &&
+            Number.isFinite(Number(actualCable))
+              ? Number(actualCable)
+              : undefined,
+          actualReceived: completionCalc?.actualReceived,
+          addonTotal: completionCalc?.addonTotal,
+          materials: scriptMaterials,
+        }}
+        onClose={() => setScriptOpen(false)}
+        onConfirm={handleConfirmSubmit}
+      />
 
-      <FormField label="安装详情（默认带出勘测安装方式，可改）">
-        <input
-          className="input"
-          value={installDetail}
-          placeholder="如 壁挂安装，PVC管敷设"
-          onChange={(e) => setInstallDetail(e.target.value)}
-        />
-      </FormField>
-
-      <FormField label="完工备注（默认带出勘测备注，可改）">
-        <textarea
-          className="textarea"
-          value={note}
-          placeholder="验收情况、遗留事项等"
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </FormField>
-    </Modal>
-
-    {/* 安装完工话术：复制后继续提交；onClose 仅关话术层，保留完工表单。
-     * 电源点/安装方式等勘测字段不在 extras 传值，
-     * 由 buildScriptVars 从 order.survey 回退带入（链路已确认）；
-     * 任务v36：extras 补 actualReceived/addonTotal（addonSummary 变量用），
-     * platformBrand 由 buildScriptVars 内部同口径自算，无需传 */}
-    <ScriptDialog
-      open={scriptOpen}
-      order={order}
-      scene="installComplete"
-      extras={{
-        materialsText,
-        totalCostText: completionCalc
-          ? formatMoney(completionCalc.profitData.profit)
-          : "以实际为准",
-        installerName: installer.trim(),
-        completeDate,
-        installDetail: installDetail.trim(),
-        addonFee:
-          addonFee.trim() !== "" && Number.isFinite(Number(addonFee))
-            ? Number(addonFee)
-            : undefined,
-        actualCable:
-          actualCable.trim() !== "" && Number.isFinite(Number(actualCable))
-            ? Number(actualCable)
-            : undefined,
-        actualReceived: completionCalc?.actualReceived,
-        addonTotal: completionCalc?.addonTotal,
-        materials: scriptMaterials,
-      }}
-      onClose={() => setScriptOpen(false)}
-      onConfirm={handleConfirmSubmit}
-    />
-
-    {/* 任务v36：固定辅材子窗口（漏保规格/单价 + PVC米数）；
-     * onSave → updateOrder fixedAux 持久化 + toast（与 1号线同口径） */}
-    <FixedMaterialsDialog
-      open={fixedAuxOpen}
-      order={order}
-      brandName={leapmotorBrandName}
-      cableMeters={
-        Number(actualCable) || Number(order.survey?.cableDistance) || 0
-      }
-      onClose={() => setFixedAuxOpen(false)}
-      onSave={(sel) => {
-        updateOrder(order.id, { ...order, fixedAux: sel });
-        setFixedAuxOpen(false);
-        showToast("固定辅材已保存");
-      }}
-    />
-
+      {/* 固定辅材子窗口（保留） */}
+      <FixedMaterialsDialog
+        open={fixedAuxOpen}
+        order={order}
+        brandName={leapmotorBrandName}
+        cableMeters={
+          Number(actualCable) || Number(order.survey?.cableDistance) || 0
+        }
+        onClose={() => setFixedAuxOpen(false)}
+        onSave={(sel) => {
+          updateOrder(order.id, { ...order, fixedAux: sel });
+          setFixedAuxOpen(false);
+          showToast("固定辅材已保存");
+        }}
+      />
     </>
   );
 }

@@ -173,10 +173,10 @@ export function FixedMaterialsDialog({
         }}
       />
 
-      {/* PVC 管 —— CostBindField 模块（v36.2-P10 改造） */}
+      {/* PVC —— CostBindField 模块（v36.2-P10 改造） */}
       <CostBindField
-        label={`PVC管（用量 ${pvcMeters} 米）`}
-        pickerName="PVC管"
+        label={`PVC（用量 ${pvcMeters} 米）`}
+        pickerName="PVC"
         price={pvcPrice}
         boundName={pvcBoundName}
         isBound={isPvcBound}

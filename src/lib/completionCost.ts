@@ -50,7 +50,7 @@ export interface CompletionMaterialCostParams {
   addonCostBindings?: Record<string, number>;
 }
 
-/** 固定辅材逐项成本拆解（v36.2-P3：三行拆分——漏保/PVC管/漏保盒） */
+/** 固定辅材逐项成本拆解（v36.2-P3：三行拆分——漏保/PVC/漏保盒） */
 export interface FixedAuxItemsDetail {
   /** 漏保规格，如 "C40" */
   breakerSpec: string;
@@ -60,11 +60,11 @@ export interface FixedAuxItemsDetail {
   breakerUnitPrice: number | null;
   /** 漏保成本（元）= breakerPrice×1，未匹配计 0 */
   breakerCost: number;
-  /** PVC管米数 */
+  /** PVC米数 */
   pvcMeters: number;
-  /** PVC管单价（元/米；成本表查询） */
+  /** PVC单价（元/米；成本表查询） */
   pvcUnitPrice: number;
-  /** PVC管成本（元）= pvcMeters × pvcUnitPrice */
+  /** PVC成本（元）= pvcMeters × pvcUnitPrice */
   pvcCost: number;
   /** 漏保盒单价（元；null=成本表未匹配） */
   leakBoxUnitPrice?: number | null;
@@ -154,17 +154,17 @@ export function calcCompletionMaterialCostDetail(
   }
 
   /* 3. 固定辅材：有快照取值源按 V2 算，无值按成本表默认一份 */
-  const pvcUnitPriceRaw = findPrice("PVC管") ?? 0;
+  const pvcUnitPriceRaw = findPrice("PVC") ?? 0;
   const leakBoxPriceRaw = findPrice("漏保盒") ?? 0;
   const auxCost = fixedAux
     ? calcFixedAuxCostV2(fixedAux, costSheet)
     : round2(
         (findPrice("漏保 C40") ?? 0) * 1 +
-          (findPrice("PVC管") ?? 0) * cableTotalMeters +
+          (findPrice("PVC") ?? 0) * cableTotalMeters +
           leakBoxPriceRaw,
       );
 
-  /* v36.2-P3：固定辅材逐项拆解（三行——漏保/PVC管/漏保盒） */
+  /* v36.2-P3：固定辅材逐项拆解（三行——漏保/PVC/漏保盒） */
   let fixedAuxItems: FixedAuxItemsDetail | undefined;
   if (fixedAux) {
     const breakerCost = fixedAux.breakerPrice != null ? fixedAux.breakerPrice : 0;
@@ -189,7 +189,7 @@ export function calcCompletionMaterialCostDetail(
     const breakerDefault =
       getGlobalBinding("漏保")?.costPrice ?? findPrice("漏保 C40") ?? 0;
     const pvcDefault =
-      getGlobalBinding("PVC管")?.costPrice ?? findPrice("PVC管") ?? 0;
+      getGlobalBinding("PVC管")?.costPrice ?? findPrice("PVC") ?? 0;
     fixedAuxItems = {
       breakerSpec: "C40",
       breakerLabel: breakerDefault > 0 ? "漏保 C40" : "漏保 未绑定",
