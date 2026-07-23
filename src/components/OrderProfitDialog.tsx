@@ -7,7 +7,6 @@
 import { useState } from "react";
 import { Modal } from "@/components/common/Modal";
 import { useApp } from "@/context/AppContext";
-import { OrderStatus } from "@/types";
 import type { Order } from "@/types";
 
 interface OrderProfitDialogProps {
@@ -39,7 +38,7 @@ export function OrderProfitDialog({ open, order, onClose }: OrderProfitDialogPro
     if (fa.pvcPrice != null && fa.pvcMeters > 0) {
       fixedRows.push({ name: "PVC管", unitPrice: fa.pvcPrice, quantity: fa.pvcMeters });
     }
-    if (fa.cablePrice != null && order.completion?.actualCable) {
+    if (fa.cablePrice != null && (order.completion?.actualCable || 1)) {
       fixedRows.push({ name: "电缆", unitPrice: fa.cablePrice, quantity: order.completion.actualCable });
     } else if (fa.cablePrice != null) {
       fixedRows.push({ name: "电缆", unitPrice: fa.cablePrice, quantity: 1 });
