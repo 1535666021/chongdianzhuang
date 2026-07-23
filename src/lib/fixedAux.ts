@@ -87,7 +87,7 @@ export function calcFixedAuxCostV2(
   sel: FixedAuxSelection,
   costSheet: CostSheetItem[],
 ): number {
-  const pvcUnitPrice = findCostSheetPrice("PVC管", costSheet) ?? 0;
+  const pvcUnitPrice = sel.pvcPrice ?? findCostSheetPrice("PVC管", costSheet) ?? 0;
   const leakBoxUnitPrice = sel.leakBoxPrice ?? findCostSheetPrice("漏保盒", costSheet) ?? 0;
   return round2(
     (sel.breakerPrice ?? 0) * 1 +
