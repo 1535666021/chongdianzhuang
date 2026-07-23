@@ -1,5 +1,5 @@
 /* ============================================================
- * 成本绑定字段（v36.2-P10 可复用模块）
+ * 成本绑定字段（v36.2-P12 可复用模块）
  * 功能：价格输入框 + 绑定材料名称显示框 + 绑定按钮
  * 点击绑定 → 弹出成本表选择器 → 选中后价格与名称同步回填
  * 规范：纯渲染组件，业务逻辑（成本表查询/弹窗）由父组件传入
@@ -28,6 +28,8 @@ export interface CostBindFieldProps {
   onBoundNameChange: (val: string) => void;
   /** 绑定成功回调（item=选中的成本表条目） */
   onBind: (item: CostSheetItem) => void;
+  /** 成本表搜索用的纯净材料名（缺省回退到 label） */
+  pickerName?: string;
   /** 弹窗 zIndex（默认不覆盖） */
   zIndex?: number;
 }
@@ -42,6 +44,7 @@ export function CostBindField({
   onPriceChange,
   onBoundNameChange,
   onBind,
+  pickerName,
   zIndex,
 }: CostBindFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
@@ -90,7 +93,7 @@ export function CostBindField({
 
       {showPicker && (
         <CostSheetPicker
-          materialName={boundName || label}
+          materialName={boundName || pickerName || label}
           onSelect={handleSelect}
           onClose={() => setShowPicker(false)}
         />
