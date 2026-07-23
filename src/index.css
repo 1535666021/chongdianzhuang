@@ -747,7 +747,7 @@ img {
   width: 100%;
   max-width: 480px;
   max-height: 70vh;
-  background-color: var(--color-bg-base);
+  background-color: var(--color-bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-modal);
   z-index: 111;
