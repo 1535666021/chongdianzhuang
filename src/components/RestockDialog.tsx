@@ -31,6 +31,9 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
   const [materials, setMaterials] = useState<RestockMaterialRow[]>([]);
   /* 辅材下拉受控选中值（选中追加一行后立即复位，便于连续添加） */
   const [materialPick, setMaterialPick] = useState("");
+  /* 手动添加：名称 + 数量 */
+  const [manualName, setManualName] = useState("");
+  const [manualQty, setManualQty] = useState("1");
 
   /* 本次纳入补桩的安装单（全部「需补桩」，「已补桩」不纳入；
    * v32.3 顺手修：剔除回收站挂标单——与首页入口计数（activeOrders 口径）
@@ -81,6 +84,8 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
   useEffect(() => {
     if (!open) {
       setPreviewDirty(false);
+      setManualName("");
+      setManualQty("1");
       return;
     }
     if (!previewDirty) setPreviewText(shipmentText);
@@ -99,6 +104,18 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
     if (!name) return;
     setMaterials((prev) => [...prev, { name, quantity: "1" }]);
     setMaterialPick("");
+  };
+  /* 手动输入追加一行 */
+  const handleManualAdd = () => {
+    const name = manualName.trim();
+    if (!name) {
+      showToast("请输入辅材名称");
+      return;
+    }
+    const qty = manualQty.trim() || "1";
+    setMaterials((prev) => [...prev, { name, quantity: qty }]);
+    setManualName("");
+    setManualQty("1");
   };
 
   /* ---- 一键复制：编辑后预览文本整段进剪贴板，成功后纳入单全翻「已补桩」 ---- */
@@ -119,6 +136,8 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
     markRestockDone(ids);
     setMaterials([]);
     setMaterialPick("");
+    setManualName("");
+    setManualQty("1");
     setPreviewDirty(false);
     showToast(`发货单已复制，${ids.length} 单已标记「已补桩」`);
     onClose();
@@ -156,7 +175,7 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
         }}
       />
 
-      {/* 辅材区：下拉（材料库名称去重）+ 数量手填，可增可删可整区不填 */}
+      {/* 辅材区：下拉（材料库名称去重）+ 手动输入，可增可删可整区不填 */}
       <FormField label="辅材（可整区不填）">
         <div className="flex-column gap-sm">
           <select
@@ -171,6 +190,30 @@ export function RestockDialog({ open, onClose }: RestockDialogProps) {
               </option>
             ))}
           </select>
+
+          {/* 手动添加行：名称 + 数量 + 添加按钮 */}
+          <div className="flex gap-sm">
+            <input
+              className="input flex-1"
+              placeholder="手动输入辅材名称"
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+            />
+            <input
+              className="input shipment-preview__qty"
+              placeholder="数量"
+              value={manualQty}
+              onChange={(e) => setManualQty(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={handleManualAdd}
+            >
+              添加
+            </button>
+          </div>
+
           {materials.map((item, index) => (
             <div key={index} className="card card--flat">
               <div className="flex gap-sm">
