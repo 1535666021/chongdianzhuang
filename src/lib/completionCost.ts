@@ -16,6 +16,7 @@ import type {
 import { findCostSheetPrice } from "@/lib/costMapping";
 import { calcMaterialCost } from "@/lib/finance";
 import { calcFixedAuxCostV2 } from "@/lib/fixedAux";
+import { getGlobalBinding } from "@/lib/globalMaterialConfig";
 
 /* ------------------------------------------------------------
  * 一、兜底常量
@@ -144,8 +145,10 @@ export function calcCompletionMaterialCostDetail(
     };
   } else {
     /* 无 fixedAux 取值源：回退成本表默认三项 */
-    const breakerDefault = findPrice("漏保 C40") ?? 0;
-    const pvcDefault = findPrice("PVC管") ?? 0;
+    const breakerDefault =
+      getGlobalBinding("漏保")?.costPrice ?? findPrice("漏保 C40") ?? 0;
+    const pvcDefault =
+      getGlobalBinding("PVC管")?.costPrice ?? findPrice("PVC管") ?? 0;
     fixedAuxItems = {
       breakerSpec: "C40",
       breakerLabel: breakerDefault > 0 ? "漏保 C40" : "漏保 未绑定",

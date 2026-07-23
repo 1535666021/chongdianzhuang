@@ -30,6 +30,8 @@ import { FormField } from "@/components/common/FormField";
 import { ScriptDialog } from "@/components/ScriptDialog";
 import { FixedMaterialsDialog } from "@/components/FixedMaterialsDialog";
 import { CostSheetPicker } from "@/components/CostSheetPicker";
+import { CostBindField } from "@/components/CostBindField";
+import { loadGlobalMaterialConfig } from "@/lib/globalMaterialConfig";
 import { useApp } from "@/context/AppContext";
 import { getAddonOptions } from "@/lib/addonOptions";
 import { findBrand, mergeBrands } from "@/lib/brandMaterials";
@@ -697,113 +699,96 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                 {/* 任务v36.2-P3：固定辅材拆三行（漏保/PVC管/漏保盒），三项和=总额 */}
                 <div>
                   材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
-                  （电缆{order.fixedAux?.cablePrice != null
-                    ? (
-                      <span
-                        className="text-success cursor-pointer"
-                        style={{ textDecoration: "underline" }}
-                        onClick={() => {
-                          setPickerMaterialName("电缆");
-                          setShowCostPicker(true);
-                        }}
-                      >
-                        {formatMoney(completionCalc.materialBreakdown.cable)}
-                      </span>
-                    )
-                    : (
-                      <span
-                        className="text-danger cursor-pointer"
-                        onClick={() => {
-                          setPickerMaterialName("电缆");
-                          setShowCostPicker(true);
-                        }}
-                      >
-                        未绑定
-                      </span>
-                    )}
+                  （电缆<CostBindField
+                    materialName="电缆"
+                    orderValue={order.fixedAux?.cablePrice}
+                    onBind={(price, name) => {
+                      updateOrder(order.id, {
+                        ...order,
+                        fixedAux: {
+                          ...(order.fixedAux ?? {
+                            breakerSpec: "C40",
+                            breakerPrice: null,
+                            pvcMeters: 0,
+                            leakBoxPrice: null,
+                          }),
+                          cablePrice: price,
+                          cableBoundName: name,
+                        },
+                      });
+                    }}
+                    showToast={showToast}
+                  />
                   +其他{formatMoney(completionCalc.materialBreakdown.other)}）
                 </div>
                 {completionCalc.materialBreakdown.fixedAuxItems ? (
                   <div className="flex-column gap-xs" style={{ paddingLeft: 16 }}>
                     <div>
                       {completionCalc.materialBreakdown.fixedAuxItems.breakerLabel}
-                      {completionCalc.materialBreakdown.fixedAuxItems.breakerUnitPrice != null
-                        ? (
-                          <span
-                            className="text-success cursor-pointer"
-                            style={{ textDecoration: "underline" }}
-                            onClick={() => {
-                              setPickerMaterialName("漏保");
-                              setShowCostPicker(true);
-                            }}
-                          >
-                            {` ${formatMoney(completionCalc.materialBreakdown.fixedAuxItems.breakerCost)}`}
-                          </span>
-                        )
-                        : (
-                          <span
-                            className="text-danger cursor-pointer"
-                            onClick={() => {
-                              setPickerMaterialName("漏保");
-                              setShowCostPicker(true);
-                            }}
-                          >
-                            （未绑定，点击选择）
-                          </span>
-                        )}
+                      <CostBindField
+                        materialName="漏保"
+                        orderValue={order.fixedAux?.breakerPrice}
+                        onBind={(price, name) => {
+                          updateOrder(order.id, {
+                            ...order,
+                            fixedAux: {
+                              ...(order.fixedAux ?? {
+                                breakerSpec: "C40",
+                                breakerPrice: null,
+                                pvcMeters: 0,
+                                leakBoxPrice: null,
+                              }),
+                              breakerPrice: price,
+                            },
+                          });
+                        }}
+                        showToast={showToast}
+                      />
                     </div>
                     <div>
                       PVC管 {completionCalc.materialBreakdown.fixedAuxItems.pvcMeters}米{" "}
-                      {order.fixedAux?.pvcPrice != null
-                        ? (
-                          <span
-                            className="text-success cursor-pointer"
-                            style={{ textDecoration: "underline" }}
-                            onClick={() => {
-                              setPickerMaterialName("PVC管");
-                              setShowCostPicker(true);
-                            }}
-                          >
-                            {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.pvcCost)}
-                          </span>
-                        )
-                        : (
-                          <span
-                            className="text-danger cursor-pointer"
-                            onClick={() => {
-                              setPickerMaterialName("PVC管");
-                              setShowCostPicker(true);
-                            }}
-                          >
-                            未绑定
-                          </span>
-                        )}
+                      <CostBindField
+                        materialName="PVC管"
+                        orderValue={order.fixedAux?.pvcPrice}
+                        onBind={(price, name) => {
+                          updateOrder(order.id, {
+                            ...order,
+                            fixedAux: {
+                              ...(order.fixedAux ?? {
+                                breakerSpec: "C40",
+                                breakerPrice: null,
+                                pvcMeters: 0,
+                                leakBoxPrice: null,
+                              }),
+                              pvcPrice: price,
+                              pvcBoundName: name,
+                            },
+                          });
+                        }}
+                        showToast={showToast}
+                      />
                     </div>
                     <div>
                       漏保盒 {formatMoney(completionCalc.materialBreakdown.fixedAuxItems.leakBoxCost)}
-                      {completionCalc.materialBreakdown.fixedAuxItems.leakBoxUnitPrice != null ? (
-                        <span
-                          className="text-success text-sm"
-                          style={{ cursor: "pointer", textDecoration: "underline" }}
-                          onClick={() => {
-                            setPickerMaterialName("漏保盒");
-                            setShowCostPicker(true);
-                          }}
-                        >
-                          已绑定
-                        </span>
-                      ) : (
-                        <span
-                          className="text-danger text-sm"
-                          style={{ cursor: "pointer", textDecoration: "underline" }}
-                          onClick={() => {
-                            setPickerMaterialName("漏保盒");
-                            setShowCostPicker(true);
-                          }}
-                        >
-                          未绑定
-                        </span>
-                      )}
+                      <CostBindField
+                        materialName="漏保盒"
+                        orderValue={order.fixedAux?.leakBoxPrice}
+                        onBind={(price, name) => {
+                          updateOrder(order.id, {
+                            ...order,
+                            fixedAux: {
+                              ...(order.fixedAux ?? {
+                                breakerSpec: "C40",
+                                breakerPrice: null,
+                                pvcMeters: 0,
+                                leakBoxPrice: null,
+                              }),
+                              leakBoxPrice: price,
+                            },
+                          });
+                        }}
+                        showToast={showToast}
+                      />
                     </div>
                   </div>
                 ) : null}
@@ -910,39 +895,6 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
       }}
     />
 
-    {/* v36.2-P2：成本表选择弹窗 */}
-    {showCostPicker && (
-      <CostSheetPicker
-        materialName={pickerMaterialName}
-        onSelect={(item) => {
-          setCostSheet(loadCostSheet());
-          if (!order) {
-            setShowCostPicker(false);
-            return;
-          }
-          const current = order.fixedAux ?? {
-            breakerSpec: "C40",
-            breakerPrice: null,
-            pvcMeters: 0,
-            leakBoxPrice: null,
-          };
-          if (pickerMaterialName === "漏保") {
-            updateOrder(order.id, {
-              ...order,
-              fixedAux: { ...current, breakerPrice: item.costPrice },
-            });
-          } else if (pickerMaterialName === "漏保盒") {
-            updateOrder(order.id, {
-              ...order,
-              fixedAux: { ...current, leakBoxPrice: item.costPrice },
-            });
-          }
-          // 电缆/PVC管 走成本表自动匹配，无需更新 fixedAux
-          setShowCostPicker(false);
-        }}
-        onClose={() => setShowCostPicker(false)}
-      />
-    )}
     </>
   );
 }
