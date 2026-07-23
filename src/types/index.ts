@@ -194,6 +194,10 @@ export interface FixedAuxSelection {
   breakerBoundName?: string | null;
   /** PVC 管米数（默认=用线米数，桥架混用场景可手改） */
   pvcMeters: number;
+  /** PVC 管单价（元/米；null=未绑定，v36.2-P10 新增） */
+  pvcPrice?: number | null;
+  /** PVC 管绑定的成本表条目名称（v36.2-P10） */
+  pvcBoundName?: string | null;
   /** 电缆单价（元；null=未绑定，v36.2-P10 新增） */
   cablePrice?: number | null;
   /** 电缆绑定的成本表条目名称（v36.2-P10） */
