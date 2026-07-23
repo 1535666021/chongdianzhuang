@@ -250,6 +250,7 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
         Number(actualCable) || Number(order.survey?.cableDistance) || 0,
       costSheet,
       fixedAux: order.fixedAux,
+      addonCostBindings: order.addonCostBindings,
     });
     const materialCost = materialBreakdown.total;
     const profitData = buildCompletionProfitData({
@@ -698,10 +699,14 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     Math.abs(completionCalc.profitData.platformDeduction),
                   )}
                 </div>
-                {/* 任务v36.2-P3：固定辅材拆三行（漏保/PVC管/漏保盒），三项和=总额 */}
+                {/* P13：材料成本逐项列（增项列表有几行，明细列几行） */}
                 <div>
                   材料成本 −{formatMoney(completionCalc.materialBreakdown.total)}
-                  （电缆<CostBindField
+                </div>
+                {/* 电缆行 */}
+                <div style={{ paddingLeft: 16 }}>
+                  线缆敷设 {completionCalc.cableTotalMeters}米{" "}
+                  <CostBindField
                     materialName="电缆"
                     orderValue={order.fixedAux?.cablePrice}
                     quantity={completionCalc.cableTotalMeters}
@@ -722,8 +727,31 @@ export function CompleteModal({ open, order, onClose }: CompleteModalProps) {
                     }}
                     showToast={showToast}
                   />
-                  +其他{formatMoney(completionCalc.materialBreakdown.other)}）
                 </div>
+                {/* 增项逐项成本（P13：每增项一行，名称/数量/成本价） */}
+                {completionCalc.materialBreakdown.addonItems?.map((item) => (
+                  <div key={item.name} style={{ paddingLeft: 16 }}>
+                    {item.shortName} {item.quantity}{item.unit}{" "}
+                    <CostBindField
+                      materialName={item.name}
+                      orderValue={order.addonCostBindings?.[item.name]}
+                      quantity={item.quantity}
+                      onBind={(price, name) => {
+                        updateOrder(order.id, {
+                          ...order,
+                          addonCostBindings: {
+                            ...(order.addonCostBindings ?? {}),
+                            [item.name]: price,
+                          },
+                        });
+                      }}
+                      showToast={showToast}
+                    />
+                    {item.unitPrice != null && item.quantity > 1
+                      ? ` (×${item.quantity}=${formatMoney(item.total)})`
+                      : ""}
+                  </div>
+                ))}
                 {completionCalc.materialBreakdown.fixedAuxItems ? (
                   <div className="flex-column gap-xs" style={{ paddingLeft: 16 }}>
                     <div>
