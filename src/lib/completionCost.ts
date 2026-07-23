@@ -189,7 +189,7 @@ export function calcCompletionMaterialCostDetail(
     const breakerDefault =
       getGlobalBinding("漏保")?.costPrice ?? findPrice("漏保 C40") ?? 0;
     const pvcDefault =
-      getGlobalBinding("PVC管")?.costPrice ?? findPrice("PVC") ?? 0;
+      getGlobalBinding("PVC")?.costPrice ?? getGlobalBinding("PVC管")?.costPrice ?? findPrice("PVC") ?? 0;
     fixedAuxItems = {
       breakerSpec: "C40",
       breakerLabel: breakerDefault > 0 ? "漏保 C40" : "漏保 未绑定",

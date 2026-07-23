@@ -8,6 +8,8 @@ import { useState, useEffect } from "react";
 import { Modal } from "@/components/common/Modal";
 import { CostBindField } from "@/components/common/CostBindField";
 import { loadCostSheet } from "@/lib/storage";
+import { fuzzySearchCostSheet, fuzzyFindCostSheetPrice } from "@/lib/costMapping";
+import { getGlobalBinding, setGlobalBinding, costSheetItemToBinding } from "@/lib/globalMaterialConfig";
 import type { FixedAuxSelection, Order, CostSheetItem } from "@/types";
 import {
   BREAKER_SPECS,
@@ -86,6 +88,61 @@ export function FixedMaterialsDialog({
       setBreakerBoundName(`漏保 ${spec}`);
     }
   }, [spec, costSheet]);
+
+  /* 自动搜索绑定：弹窗打开时，对各项固定辅材在成本表中自动搜索 */
+  useEffect(() => {
+    if (costSheet.length === 0) return;
+
+    // 1. PVC自动搜索（搜索词："PVC"）
+    if (!pvcBoundName && !pvcPrice) {
+      const pvcItem = fuzzySearchCostSheet("PVC", costSheet);
+      if (pvcItem) {
+        setPvcPrice(String(pvcItem.costPrice));
+        setPvcBoundName(pvcItem.name);
+        setGlobalBinding("PVC", costSheetItemToBinding(pvcItem));
+      }
+    }
+
+    // 2. 电缆自动搜索（搜索词："电缆"）
+    if (!cableBoundName && !cablePrice) {
+      const cableItem = fuzzySearchCostSheet("电缆", costSheet);
+      if (cableItem) {
+        setCablePrice(String(cableItem.costPrice));
+        setCableBoundName(cableItem.name);
+        setGlobalBinding("电缆", costSheetItemToBinding(cableItem));
+      }
+    }
+
+    // 3. 漏保盒自动搜索（搜索词："漏保盒"）
+    if (!leakBoxBoundName && !leakBoxPrice) {
+      const boxItem = fuzzySearchCostSheet("漏保盒", costSheet);
+      if (boxItem) {
+        setLeakBoxPrice(String(boxItem.costPrice));
+        setLeakBoxBoundName(boxItem.name);
+        setGlobalBinding("漏保盒", costSheetItemToBinding(boxItem));
+      }
+    }
+
+    // 4. 漏保规格自动搜索（搜索词：当前选中的spec，如"C40"）
+    // 注意：漏保规格切换时已有联动，这里只在无绑定状态时补充
+    if (!breakerBoundName && !breakerPrice) {
+      const breakerItem = fuzzySearchCostSheet(`漏保 ${spec}`, costSheet);
+      if (!breakerItem) {
+        // 如果"漏保 C40"搜不到，尝试直接用规格名"C40"搜索
+        const specItem = fuzzySearchCostSheet(spec, costSheet);
+        if (specItem) {
+          setBreakerPrice(String(specItem.costPrice));
+          setBreakerBoundName(specItem.name);
+          setGlobalBinding("漏保", costSheetItemToBinding(specItem));
+        }
+      } else {
+        setBreakerPrice(String(breakerItem.costPrice));
+        setBreakerBoundName(breakerItem.name);
+        setGlobalBinding("漏保", costSheetItemToBinding(breakerItem));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [costSheet]);
 
   const handleConfirm = () => {
     const sel: FixedAuxSelection = {
@@ -170,6 +227,7 @@ export function FixedMaterialsDialog({
         onBind={(item) => {
           setBreakerPrice(String(item.costPrice));
           setBreakerBoundName(item.name);
+          setGlobalBinding("漏保", costSheetItemToBinding(item));
         }}
       />
 
@@ -185,6 +243,7 @@ export function FixedMaterialsDialog({
         onBind={(item) => {
           setPvcPrice(String(item.costPrice));
           setPvcBoundName(item.name);
+          setGlobalBinding("PVC", costSheetItemToBinding(item));
         }}
       />
 
@@ -200,6 +259,7 @@ export function FixedMaterialsDialog({
         onBind={(item) => {
           setCablePrice(String(item.costPrice));
           setCableBoundName(item.name);
+          setGlobalBinding("电缆", costSheetItemToBinding(item));
         }}
       />
 
@@ -215,6 +275,7 @@ export function FixedMaterialsDialog({
         onBind={(item) => {
           setLeakBoxPrice(String(item.costPrice));
           setLeakBoxBoundName(item.name);
+          setGlobalBinding("漏保盒", costSheetItemToBinding(item));
         }}
       />
     </Modal>

@@ -65,3 +65,41 @@ export function findCostSheetPrice(name: string, costSheet: CostSheetItem[]): nu
   const cp = typeof match.costPrice === "number" && match.costPrice > 0 ? match.costPrice : 0;
   return cp > 0 ? cp : null;
 }
+
+/**
+ * 模糊截断搜索：从完整名称开始，末尾逐字截断，直到命中成本表
+ * 规则：
+ *  1. 先搜完整名称
+ *  2. 未命中则从末尾删除1个字符，继续搜
+ *  3. 循环直到命中或只剩1个字符
+ *  4. 匹配方式：双向includes（成本表名包含搜索词 或 搜索词包含成本表名）
+ * 返回：命中的CostSheetItem 或 null
+ */
+export function fuzzySearchCostSheet(
+  name: string,
+  costSheet: CostSheetItem[],
+): CostSheetItem | null {
+  if (!name || costSheet.length === 0) return null;
+  let search = name;
+  while (search.length > 0) {
+    const match = costSheet.find((c) =>
+      c.name.includes(search) || search.includes(c.name)
+    );
+    if (match) return match;
+    search = search.slice(0, -1);
+  }
+  return null;
+}
+
+/**
+ * 模糊截断搜索价格（只返回价格数字）
+ */
+export function fuzzyFindCostSheetPrice(
+  name: string,
+  costSheet: CostSheetItem[],
+): number | null {
+  const item = fuzzySearchCostSheet(name, costSheet);
+  if (!item) return null;
+  const cp = typeof item.costPrice === "number" && item.costPrice > 0 ? item.costPrice : 0;
+  return cp > 0 ? cp : null;
+}

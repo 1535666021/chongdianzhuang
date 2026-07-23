@@ -52,7 +52,7 @@ export function getGlobalBinding(
   const key =
     materialName === "电缆"
       ? "cable"
-      : materialName === "PVC管"
+      : materialName === "PVC管" || materialName === "PVC"
       ? "pvc"
       : materialName === "漏保"
       ? "breaker"
@@ -69,7 +69,7 @@ export function setGlobalBinding(
   const key =
     materialName === "电缆"
       ? "cable"
-      : materialName === "PVC管"
+      : materialName === "PVC管" || materialName === "PVC"
       ? "pvc"
       : materialName === "漏保"
       ? "breaker"
